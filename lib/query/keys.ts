@@ -14,6 +14,8 @@ export const queryKeys = {
   workspace: () => ['workspace'] as const,
   // LUM-918: the workspace's pending deletion (banner + danger zone).
   workspacePendingDeletion: () => ['workspace', 'pending-deletion'] as const,
+  // LUM-1338: the AI feature switches and each feature's state.
+  workspaceAiFeatures: () => ['workspace', 'ai-features'] as const,
   // LUM-1114: per project, the policy rules no detector checks.
   workspacePolicyCoverage: () => ['workspace', 'policy-coverage'] as const,
   // LUM-1133: per-repository automatic PR review settings.
@@ -140,12 +142,35 @@ export const queryKeys = {
 
   taskTestCases: (taskId: string) => ['task-test-cases', taskId] as const,
 
+  taskDocuments: (taskId: string) => ['task-documents', taskId] as const,
+
+  taskSlackContexts: (taskId: string) =>
+    ['task-slack-contexts', taskId] as const,
+
+  // LUM-1340: batched status lookup for the TEAM-N mentions in one doc.
+  // Scoped by workspace: the same TEAM-N can name different tasks elsewhere.
+  mentionStatus: (workspaceUrl: string, identifiers: string[]) =>
+    ['mention-status', workspaceUrl, [...identifiers].sort()] as const,
+
+  mentionSearch: (workspaceUrl: string, query: string, limit: number) =>
+    ['mention-search', workspaceUrl, query, limit] as const,
+
+  workspaceExports: () => ['workspace', 'exports'] as const,
+
+  workspaceAiDerivedContent: () => ['workspace', 'ai-derived-content'] as const,
+
+  sessionRawRecord: (sessionId: string) =>
+    ['session-raw-record', sessionId] as const,
+
   milestoneTestCases: (milestoneId: string) =>
     ['milestone-test-cases', milestoneId] as const,
 
   integrations: {
     slack: (workspaceUrl: string) =>
       ['integrations', 'slack', workspaceUrl] as const,
+    // LUM-1340: one project's Slack channel config + pickable channels.
+    slackProject: (workspaceUrl: string, projectId: string) =>
+      ['integrations', 'slack', workspaceUrl, 'project', projectId] as const,
     github: (workspaceUrl: string) =>
       ['integrations', 'github', workspaceUrl] as const,
     githubApp: (workspaceUrl: string) =>
@@ -164,5 +189,9 @@ export const queryKeys = {
       ['integrations', 'figma', workspaceUrl] as const,
     googleDrive: (workspaceUrl: string) =>
       ['integrations', 'google-drive', workspaceUrl] as const,
+    feishu: (workspaceUrl: string) =>
+      ['integrations', 'feishu', workspaceUrl] as const,
+    feishuAccount: (workspaceUrl: string) =>
+      ['integrations', 'feishu-account', workspaceUrl] as const,
   },
 }

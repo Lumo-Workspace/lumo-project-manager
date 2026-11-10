@@ -4,14 +4,9 @@
  * (in the danger zone since LUM-1327)
  * which needs the workspace name re-typed and runs batched passes until done.
  */
-import {
-  render,
-  screen,
-  fireEvent,
-  waitFor,
-  within,
-} from '@testing-library/react'
-import { DataRetentionSection } from '@/app/workspace/[workspaceUrl]/components/settings/DataRetentionSection'
+import { screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { renderWithQueryClient as render } from '../../helpers/query-client'
+import { AiDerivedContentRow } from '@/app/workspace/[workspaceUrl]/components/settings/AiDerivedContentRow'
 import { AiDerivedContentDeleteRow } from '@/app/workspace/[workspaceUrl]/components/settings/AiDerivedContentDeleteRow'
 import { workspacesClient } from '@/lib/api-client'
 import { toast } from 'sonner'
@@ -62,14 +57,10 @@ const SETTINGS = {
 }
 
 function renderSection(settings = SETTINGS) {
-  // LUM-1327: the delete row moved to the danger zone; render both.
+  // LUM-1339: the switch and its delete share the AI page; render both.
   return render(
     <>
-      <DataRetentionSection
-        settings={settings}
-        // LUM-1062: the plugin rows (scan evidence) read the workspace row.
-        workspace={settings}
-      />
+      <AiDerivedContentRow initialEnabled={settings.aiDerivedContentEnabled} />
       <AiDerivedContentDeleteRow workspaceName='Acme' />
     </>
   )

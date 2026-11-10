@@ -1,5 +1,5 @@
 {
-  "cliVersion": "2.3.0",
+  "cliVersion": "2.4.0",
   "globalFlags": {
     "--no-hints": {
       "long": "--no-hints",
@@ -141,10 +141,35 @@
     },
     "auth login": {
       "arguments": [],
-      "flags": {},
+      "flags": {
+        "--no-bind": {
+          "long": "--no-bind",
+          "short": null,
+          "value": "none",
+          "enum": null,
+          "enumCaseInsensitive": false,
+          "description": "Store the login without pointing the current repository at it (the first login still becomes the default)"
+        },
+        "--no-paste": {
+          "long": "--no-paste",
+          "short": null,
+          "value": "none",
+          "enum": null,
+          "enumCaseInsensitive": false,
+          "description": "Fail instead of asking for a key when the server does not issue one (for scripts); never opens a browser"
+        },
+        "--url": {
+          "long": "--url",
+          "short": null,
+          "value": "required",
+          "enum": null,
+          "enumCaseInsensitive": false,
+          "description": "The Lumo server to log in to, e.g. http://localhost:3000 (default: LUMO_API_URL, else the hosted service)"
+        }
+      },
       "hasSubcommands": false,
       "isInvokable": true,
-      "description": "Log in to Lumo by pasting an API key",
+      "description": "Log in to Lumo: a self-hosted server in local mode issues the key itself; otherwise paste an API key",
       "codex": {
         "serverOnly": false,
         "localFiles": "writes",
@@ -153,14 +178,52 @@
     },
     "auth logout": {
       "arguments": [],
-      "flags": {},
+      "flags": {
+        "--url": {
+          "long": "--url",
+          "short": null,
+          "value": "required",
+          "enum": null,
+          "enumCaseInsensitive": false,
+          "description": "The server whose login to remove"
+        }
+      },
       "hasSubcommands": false,
       "isInvokable": true,
-      "description": "Log out and remove local credentials",
+      "description": "Remove one login: the server given by --url, else the one this directory uses",
       "codex": {
         "serverOnly": false,
         "localFiles": "writes",
-        "detail": "deletes ~/.lumo credentials"
+        "detail": "deletes a login from ~/.lumo credentials"
+      }
+    },
+    "auth use": {
+      "arguments": [{ "name": "url", "required": false, "variadic": false }],
+      "flags": {
+        "--default": {
+          "long": "--default",
+          "short": null,
+          "value": "none",
+          "enum": null,
+          "enumCaseInsensitive": false,
+          "description": "Make it the default login instead of binding this repository"
+        },
+        "--unbind": {
+          "long": "--unbind",
+          "short": null,
+          "value": "none",
+          "enum": null,
+          "enumCaseInsensitive": false,
+          "description": "Drop this repository's binding so it uses the default login"
+        }
+      },
+      "hasSubcommands": false,
+      "isInvokable": true,
+      "description": "Point this repository (or, with --default, every unbound one) at a server you are logged in to",
+      "codex": {
+        "serverOnly": false,
+        "localFiles": "writes",
+        "detail": "writes the repository binding to ~/.lumo credentials"
       }
     },
     "crossing": {
@@ -5434,7 +5497,7 @@
           "value": "none",
           "enum": null,
           "enumCaseInsensitive": false,
-          "description": "Also print workspace name, key name and API URL"
+          "description": "Also print workspace name, key name, API URL and binding"
         },
         "--json": {
           "long": "--json",
@@ -5447,7 +5510,7 @@
       },
       "hasSubcommands": false,
       "isInvokable": true,
-      "description": "Show the logged-in identity from local credentials (one line; no network call)",
+      "description": "Show every login and mark (*) the one this directory uses (no network call)",
       "codex": {
         "serverOnly": false,
         "localFiles": "none",
@@ -5460,6 +5523,71 @@
       "hasSubcommands": true,
       "isInvokable": false,
       "description": "Workspace settings from the terminal"
+    },
+    "workspace done-requirements": {
+      "arguments": [],
+      "flags": {},
+      "hasSubcommands": true,
+      "isInvokable": false,
+      "description": "What DONE requires on each linked PR's latest commit: a passing test case, a review"
+    },
+    "workspace done-requirements show": {
+      "arguments": [],
+      "flags": {
+        "--json": {
+          "long": "--json",
+          "short": null,
+          "value": "none",
+          "enum": null,
+          "enumCaseInsensitive": false,
+          "description": "Emit { testCase, review, canEdit } as JSON"
+        }
+      },
+      "hasSubcommands": false,
+      "isInvokable": true,
+      "description": "Show the Done requirements. Any member may read.",
+      "codex": { "serverOnly": true, "localFiles": "none" }
+    },
+    "workspace done-requirements update": {
+      "arguments": [],
+      "flags": {
+        "--confirm": {
+          "long": "--confirm",
+          "short": null,
+          "value": "none",
+          "enum": null,
+          "enumCaseInsensitive": false,
+          "description": "The user approved the listed changes"
+        },
+        "--json": {
+          "long": "--json",
+          "short": null,
+          "value": "none",
+          "enum": null,
+          "enumCaseInsensitive": false,
+          "description": "Emit { testCase, review, canEdit } as JSON"
+        },
+        "--review": {
+          "long": "--review",
+          "short": null,
+          "value": "required",
+          "enum": null,
+          "enumCaseInsensitive": false,
+          "description": "Require a review on each linked PR's latest commit (Lumo AI review, an imported agent review, or a GitHub approval)"
+        },
+        "--test-case": {
+          "long": "--test-case",
+          "short": null,
+          "value": "required",
+          "enum": null,
+          "enumCaseInsensitive": false,
+          "description": "Require a passing test-case run on each linked PR's latest commit"
+        }
+      },
+      "hasSubcommands": false,
+      "isInvokable": true,
+      "description": "Turn the Done requirements on or off, workspace-wide. OWNER only; every change needs --confirm.",
+      "codex": { "serverOnly": true, "localFiles": "none" }
     },
     "workspace security-scan": {
       "arguments": [],

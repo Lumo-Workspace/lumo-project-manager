@@ -139,6 +139,21 @@ export const AUDIT_INSTRUMENTED: Readonly<
   'lib/services/google-drive-integration.service.ts#disconnectIntegration': [
     'google_drive.disconnected',
   ],
+  // LUM-1341 — Feishu / Lark: the workspace install (OWNER) and the member link
+  'lib/services/feishu-integration.service.ts#completeInstall': [
+    'feishu.connected',
+    'feishu.member_accounts_removed',
+  ],
+  'lib/services/feishu-integration.service.ts#disconnectInstall': [
+    'feishu.disconnected',
+    'feishu.member_accounts_removed',
+  ],
+  'lib/services/feishu-integration.service.ts#completeAccountLink': [
+    'feishu_account.connected',
+  ],
+  'lib/services/feishu-integration.service.ts#removeAccountLink': [
+    'feishu_account.disconnected',
+  ],
   'lib/services/github.service.ts#upsertIntegration': [
     'github_oauth.connected',
   ],
@@ -188,7 +203,10 @@ export const AUDIT_INSTRUMENTED: Readonly<
  * units, so moving the body behind a wrapper does not drop a caller check.
  */
 export const AUDIT_DELEGATES: Readonly<Record<AuditUnit, AuditUnit>> = {
-  // Empty since the Clerk webhook's entry went with Clerk (LUM-1077).
+  // LUM-1338: an AI feature switch is a workspace setting
+  // (`aiFeatureSwitches`, audited as workspace.settings_updated).
+  'lib/services/ai-features.service.ts#setSwitch':
+    'lib/services/workspace.service.ts#updateWorkspace',
 }
 
 /**
@@ -247,6 +265,10 @@ export const AUDIT_EXEMPT: Readonly<Record<AuditUnit, string>> = {
   'lib/services/ai-derived-content.service.ts#getStatus': READ_ONLY,
   'lib/services/github-app-install.service.ts#getStatus': READ_ONLY,
   'lib/services/codeup.service.ts#listRepositories': READ_ONLY,
+  'lib/services/feishu-integration.service.ts#requireOwner': GATE_HELPER,
+  'lib/services/feishu-integration.service.ts#buildInstallAuthorizeUrl':
+    'read-only gate before the Feishu round trip; completeInstall is audited',
+  'lib/services/done-requirements-settings.service.ts#get': READ_ONLY,
   'lib/services/github-app-install.service.ts#startReverify':
     'read-only gate before the GitHub round trip; reverify is audited',
   'lib/services/workspace-export.service.ts#listExports': READ_ONLY,
@@ -267,6 +289,12 @@ export const AUDIT_EXEMPT: Readonly<Record<AuditUnit, string>> = {
     'per-member document share role change (routine collaboration)',
   'app/api/documents/[id]/shares/[shareId]/route.ts#DELETE':
     'per-member document share removal (routine collaboration)',
+  // LUM-1344: platform admin reads only look up the OWNER role to display
+  // the owner's email; nothing is gated on it.
+  'lib/services/platform-admin.service.ts#ownerOf':
+    'reads the OWNER role only to display the owner (platform admin read)',
+  'lib/services/platform-admin.service.ts#listWorkspaces':
+    'reads the OWNER role only to display the owner (platform admin read)',
 }
 
 /** Matches an OWNER check or a call to one of the owner-gate helpers. */

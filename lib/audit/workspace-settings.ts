@@ -16,8 +16,14 @@ export const AUDITED_WORKSPACE_SETTINGS = {
     'summaryEnabled',
     'summaryFrequency',
     'defaultLocale',
+    'aiFeatureSwitches',
   ],
-  'workspace.security_settings_updated': ['aiDerivedContentEnabled'],
+  'workspace.security_settings_updated': [
+    'aiDerivedContentEnabled',
+    // LUM-1334: they change what DONE requires.
+    'doneRequiresTestCase',
+    'doneRequiresReview',
+  ],
   'workspace.retention_updated': [
     'hookEventRetentionMode',
     'hookEventRetentionDays',

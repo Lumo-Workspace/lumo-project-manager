@@ -3,6 +3,11 @@ import { taskTemplateKeySchema } from '@/lib/validation/task-template'
 import { PUBLIC_LOCALES } from '@/lib/i18n/public-locale'
 import { ASSESSED_PRIORITIES, TASK_PRIORITIES } from '@/lib/task/priority'
 import {
+  AI_FEATURE_GROUPS,
+  AI_FEATURE_KEYS,
+  type AiFeature,
+} from '@/lib/ai-features/registry'
+import {
   PROJECT_STATUSES,
   isValidProjectDateWindow,
 } from '@/shared/src/project-lifecycle'
@@ -81,6 +86,21 @@ export const purgeAiDerivedContentSchema = z.object({
   confirmName: z.string().min(1).max(200),
 })
 
+/** LUM-1338: set one AI feature switch (master, a group or a feature). */
+export const setAiFeatureSwitchSchema = z.discriminatedUnion('level', [
+  z.object({ level: z.literal('master'), enabled: z.boolean() }),
+  z.object({
+    level: z.literal('group'),
+    key: z.enum(AI_FEATURE_GROUPS),
+    enabled: z.boolean(),
+  }),
+  z.object({
+    level: z.literal('feature'),
+    key: z.enum(AI_FEATURE_KEYS as [AiFeature, ...AiFeature[]]),
+    enabled: z.boolean(),
+  }),
+])
+
 /** LUM-944: one pass of deleting a session's raw record; `after` resumes a pass. */
 export const deleteSessionRawRecordSchema = z.object({
   after: z.string().min(1).max(200).nullish(),
@@ -114,6 +134,9 @@ export const updateWorkspaceSchema = createWorkspaceSchema.partial().extend({
     .optional(),
   // LUM-917: generate AI-derived content (memories, session / run summaries).
   aiDerivedContentEnabled: z.boolean().optional(),
+  // LUM-1334: what DONE requires on each linked PR's latest commit.
+  doneRequiresTestCase: z.boolean().optional(),
+  doneRequiresReview: z.boolean().optional(),
   // LUM-1097: default language — Slack channel posts and the DM fallback.
   // Same codes as UserPreference.locale.
   defaultLocale: z.enum(PUBLIC_LOCALES).optional(),

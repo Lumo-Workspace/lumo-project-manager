@@ -59,6 +59,8 @@ export const API = {
     exports: '/api/workspaces/me/exports',
     deletion: '/api/workspaces/me/deletion',
     aiDerivedContent: '/api/workspaces/me/ai-derived-content',
+    // LUM-1338: the AI feature switches.
+    aiFeatures: '/api/workspaces/me/ai-features',
     // LUM-1002: the PR security-scan switches (also `lumo workspace security-scan`).
     exportDownload: (id: string) =>
       `/api/workspaces/me/exports/${encodeURIComponent(id)}/download`,
@@ -186,6 +188,16 @@ export const API = {
       `/api/google-drive/oauth?workspaceUrl=${encodeURIComponent(workspaceUrl)}`,
     status: '/api/google-drive/status',
     disconnect: '/api/google-drive',
+  },
+  feishu: {
+    install: (workspaceUrl: string) =>
+      `/api/feishu/install?workspaceUrl=${encodeURIComponent(workspaceUrl)}`,
+    integration: (workspaceUrl: string) =>
+      `/api/feishu/integration?workspaceUrl=${encodeURIComponent(workspaceUrl)}`,
+    accountConnect: (workspaceUrl: string) =>
+      `/api/feishu/account/connect?workspaceUrl=${encodeURIComponent(workspaceUrl)}`,
+    account: (workspaceUrl: string) =>
+      `/api/feishu/account?workspaceUrl=${encodeURIComponent(workspaceUrl)}`,
   },
   sprints: {
     listByTeam: (teamId: string) => `/api/teams/${teamId}/sprints`,
