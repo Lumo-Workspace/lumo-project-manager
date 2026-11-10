@@ -502,6 +502,7 @@ export const PLUGIN_MODELS = [
 export const CORE_SECURITY_MODELS = [
   'BoundaryCrossing',
   'BoundaryCrossingExplanation',
+  'BoundaryCrossingTag',
   'CrossingSuppressionRule',
 ] as const
 

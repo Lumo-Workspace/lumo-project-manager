@@ -46,6 +46,7 @@ const VERB: Record<string, string> = {
   MILESTONE_MENTIONED: 'mentioned you in',
   DOCUMENT_MENTIONED: 'mentioned you in',
   DOCUMENT_COMMENT_MENTIONED: 'mentioned you in a comment on',
+  CROSSING_TAGGED: 'asked you to rule on a boundary crossing on',
 }
 
 /** Same predicate as the web inbox: asks for a response not yet given. */

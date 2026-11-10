@@ -73,6 +73,11 @@ export const STOCK_TABLES: readonly StockTable[] = [
     fields: ['note'],
   },
   {
+    label: 'BoundaryCrossingTag',
+    delegate: 'boundaryCrossingTag',
+    fields: ['message'],
+  },
+  {
     label: 'Memory',
     delegate: 'memory',
     fields: ['content'],

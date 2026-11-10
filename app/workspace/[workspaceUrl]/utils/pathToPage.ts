@@ -35,6 +35,8 @@ export function pathToPage(
   }
   if (rest.startsWith('/projects')) return { page: 'projects' }
   if (rest.startsWith('/drafts')) return { page: 'drafts' }
+  if (rest.startsWith('/boundary-crossings'))
+    return { page: 'boundary-crossings' }
   if (rest.startsWith('/sprints/')) {
     const sprintId = rest.slice('/sprints/'.length).split('/')[0]
     return { page: 'sprint-detail', projectSlug: sprintId }

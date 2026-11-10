@@ -1328,6 +1328,27 @@ export const boundaryCrossingService = {
     target: 'FALSE_POSITIVE' | 'CONFIRMED',
     caller: ReceiptCaller
   ): Promise<ReceiptSubject> {
+    return {
+      // LUM-812: the handshake is shared with the test-case defect plane, so
+      // the subject carries its kind — a crossing receipt can never be replayed
+      // against a defect ruling.
+      kind: 'CROSSING',
+      subjectId: crossingId,
+      taskId,
+      target,
+      sessionId: caller.sessionId,
+      memberId: caller.memberId,
+      stateHash: await this.stateHash(taskId, crossingId),
+    }
+  },
+
+  /**
+   * The hash of a crossing as it stands now — disposition, recurrence,
+   * explanations, detail… Any change between a read and a write changes it,
+   * so a ruling made against what was read can be refused when it is stale
+   * (LUM-769 receipts; LUM-1336 queue cards). 404 off-task.
+   */
+  async stateHash(taskId: string, crossingId: string): Promise<string> {
     const crossing = await boundaryCrossingRepository.findById(crossingId)
     if (!crossing || crossing.taskId !== taskId) {
       throw Object.assign(
@@ -1339,27 +1360,16 @@ export const boundaryCrossingService = {
       await boundaryCrossingRepository.listExplanationsByCrossingIds([
         crossingId,
       ])
-    return {
-      // LUM-812: the handshake is shared with the test-case defect plane, so
-      // the subject carries its kind — a crossing receipt can never be replayed
-      // against a defect ruling.
-      kind: 'CROSSING',
-      subjectId: crossingId,
-      taskId,
-      target,
-      sessionId: caller.sessionId,
-      memberId: caller.memberId,
-      stateHash: crossingStateHash({
-        disposition: crossing.disposition,
-        occurrenceCount: crossing.occurrenceCount ?? 1,
-        lastSeenAt: crossing.lastSeenAt,
-        detectedAt: crossing.detectedAt,
-        severity: crossing.severity,
-        category: crossing.category,
-        detail: crossing.detail,
-        explanationIds: explanations.map(e => e.id),
-      }),
-    }
+    return crossingStateHash({
+      disposition: crossing.disposition,
+      occurrenceCount: crossing.occurrenceCount ?? 1,
+      lastSeenAt: crossing.lastSeenAt,
+      detectedAt: crossing.detectedAt,
+      severity: crossing.severity,
+      category: crossing.category,
+      detail: crossing.detail,
+      explanationIds: explanations.map(e => e.id),
+    })
   },
 
   requireReceiptSecret(): string {

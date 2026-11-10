@@ -23,6 +23,7 @@ import { InboxPage } from './pages/InboxPage'
 import { DocumentsPage } from './pages/DocumentsPage'
 import { DocumentEditorPage } from './pages/DocumentEditorPage'
 import { DraftsPage } from './DraftsPage'
+import { CrossingQueuePage } from './pages/crossing-queue/CrossingQueuePage'
 import { SprintsLandingClient } from '../sprints/components/SprintsLandingClient'
 import { SprintDetailClient } from '../sprints/[sprintId]/SprintDetailClient'
 import { GlobalDocTree, CollapsedDocTreeRail } from './document/GlobalDocTree'
@@ -127,7 +128,8 @@ interface Props {
  *
  * Pages and dropped routes:
  *   my-tasks / projects / project-detail / documents /
- *   document-editor / drafts / sprints / sprint-detail / inbox.
+ *   document-editor / drafts / boundary-crossings / sprints / sprint-detail /
+ *   inbox.
  */
 export function WorkspacePageRouter(props: Props) {
   const {
@@ -377,6 +379,14 @@ export function WorkspacePageRouter(props: Props) {
             navigateTo('project-detail', project)
           }}
           onDeleteDraft={handleDeleteDraft}
+        />
+      )
+
+    case 'boundary-crossings':
+      return (
+        <CrossingQueuePage
+          members={members}
+          projects={projects.filter(p => !p.isIdea)}
         />
       )
 

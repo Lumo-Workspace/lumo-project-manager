@@ -107,6 +107,13 @@ export const queryKeys = {
   boundaryCrossings: (identifier: string) =>
     ['boundaryCrossings', identifier] as const,
 
+  // LUM-1336: the workspace Boundary Crossings tab. `crossingQueueAll` is the
+  // prefix every filter shares, so one invalidation refreshes the badge too.
+  crossingQueueAll: () => ['crossingQueue'] as const,
+  crossingQueue: (filter: string, projectId: string | null) =>
+    ['crossingQueue', filter, projectId] as const,
+  crossingCard: (crossingId: string) => ['crossingCard', crossingId] as const,
+
   fragmentTrust: (ids: string[]) => ['fragmentTrust', [...ids].sort()] as const,
 
   retireCandidates: (projectId: string) =>

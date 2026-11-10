@@ -1596,7 +1596,7 @@ const UNKNOWN_ATTRIBUTION: CrossingAttributionView = {
  * dimension that couldn't be resolved renders a localized "unknown" — never a
  * fabricated value. Owner is shown only when its display name resolves.
  */
-function AttributionLine({
+export function AttributionLine({
   attribution: a,
   ownerName,
   intl,
@@ -1674,7 +1674,7 @@ function AttributionLine({
  * length-capped server-side; when it's unavailable we show a clear pointer (+ the
  * task's PR link when one exists) instead of a blank.
  */
-function EditChangeBlock({
+export function EditChangeBlock({
   change,
   intl,
 }: {
