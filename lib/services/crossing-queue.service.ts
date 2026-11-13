@@ -425,22 +425,15 @@ export const crossingQueueService = {
     if (crossing.disposition != null) {
       throw httpError('This crossing has already been ruled on', 409)
     }
-    const current = await boundaryCrossingService.stateHash(
-      crossing.taskId,
-      crossingId
-    )
-    if (current !== input.stateHash) {
-      throw httpError(
-        'This crossing changed since the card was loaded — review it again before ruling',
-        409
-      )
-    }
+    // The stale-hash check and the write are one guarded step in the Record
+    // tab's write: a change landing between them refuses the ruling (409).
     return boundaryCrossingService.disposition(
       crossing.taskId,
       crossingId,
       input.disposition,
       input.note,
-      attribution
+      attribution,
+      { expectedStateHash: input.stateHash }
     )
   },
 

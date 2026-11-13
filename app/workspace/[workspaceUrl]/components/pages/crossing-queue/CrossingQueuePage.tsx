@@ -29,6 +29,7 @@ import {
   useShuffledIds,
 } from '../../../hooks/useCrossingQueue'
 import { applyShuffle } from './shuffle-order'
+import { countBlocking } from './card-state'
 import { CrossingCard } from './CrossingCard'
 import { CardActions } from './CardActions'
 
@@ -60,6 +61,9 @@ export function CrossingQueuePage({
     () => applyShuffle(queue?.cards ?? [], shuffled),
     [queue, shuffled]
   )
+  // The counter describes the cards in view, so both of its numbers count the
+  // filtered deck (the sidebar badge keeps the whole-queue blocking count).
+  const blockingShown = useMemo(() => countBlocking(ordered), [ordered])
   const current = ordered[0] ?? null
   const card = useCrossingCard(current?.id ?? null)
 
@@ -149,7 +153,7 @@ export function CrossingQueuePage({
                 defaultMessage:
                   '{count, plural, one {# card} other {# cards}} · {blocking} blocking Done',
               },
-              { count: ordered.length, blocking: queue.blockingCount }
+              { count: ordered.length, blocking: blockingShown }
             )}
           </span>
         )}

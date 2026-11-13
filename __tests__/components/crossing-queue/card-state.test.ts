@@ -1,5 +1,6 @@
 import {
   canRule,
+  countBlocking,
   failedSections,
   purposeExcerpt,
 } from '@/app/workspace/[workspaceUrl]/components/pages/crossing-queue/card-state'
@@ -56,5 +57,18 @@ describe('LUM-1336 purposeExcerpt', () => {
   it('is null for a missing or blank description', () => {
     expect(purposeExcerpt(null)).toBeNull()
     expect(purposeExcerpt(' \n ')).toBeNull()
+  })
+})
+
+describe('countBlocking', () => {
+  it('counts only the blocking cards it is given', () => {
+    expect(
+      countBlocking([
+        { blocking: true },
+        { blocking: false },
+        { blocking: true },
+      ])
+    ).toBe(2)
+    expect(countBlocking([])).toBe(0)
   })
 })

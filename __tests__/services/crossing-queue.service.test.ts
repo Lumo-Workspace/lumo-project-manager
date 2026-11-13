@@ -400,19 +400,22 @@ describe('rule', () => {
   it("lets the task's assignee rule, through the Record tab's write", async () => {
     viewer('MEMBER', 'a-assignee')
     cardCrossing()
-    bc.stateHash.mockResolvedValue('hash-1')
     bc.disposition.mockResolvedValue({
       crossingId: 'bc-1',
       disposition: 'FALSE_POSITIVE',
     })
     await crossingQueueService.rule(CALLER, 'bc-1', INPUT, ATTRIBUTION)
+    // The card's hash rides into the write, which checks it and guards the
+    // update in one step (no separate check-then-write here).
     expect(bc.disposition).toHaveBeenCalledWith(
       't-1',
       'bc-1',
       'FALSE_POSITIVE',
       'fixture',
-      ATTRIBUTION
+      ATTRIBUTION,
+      { expectedStateHash: 'hash-1' }
     )
+    expect(bc.stateHash).not.toHaveBeenCalled()
   })
 
   it('refuses an ineligible member with 403 and writes nothing', async () => {
@@ -441,14 +444,15 @@ describe('rule', () => {
     expect(bc.disposition).not.toHaveBeenCalled()
   })
 
-  it('refuses a stale card (the crossing changed since it was read) with 409', async () => {
+  it("passes on the write's 409 for a stale card (the crossing changed since it was read)", async () => {
     viewer('OWNER')
     cardCrossing()
-    bc.stateHash.mockResolvedValue('hash-2')
+    bc.disposition.mockRejectedValue(
+      Object.assign(new Error('changed'), { status: 409 })
+    )
     await expect(
       crossingQueueService.rule(CALLER, 'bc-1', INPUT, ATTRIBUTION)
     ).rejects.toMatchObject({ status: 409 })
-    expect(bc.disposition).not.toHaveBeenCalled()
   })
 })
 

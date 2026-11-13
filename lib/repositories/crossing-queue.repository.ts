@@ -81,7 +81,15 @@ export const crossingQueueRepository = {
           select: { taggedById: true, message: true, createdAt: true },
         },
       },
-      orderBy: { detectedAt: 'asc' },
+      // The cap must keep the cards dealt first, not the oldest rows: every
+      // blocking crossing is non-advisory, so non-advisory rows come first,
+      // then HIGH → LOW (enum order), then oldest. The service still applies
+      // the exact deal order in memory.
+      orderBy: [
+        { advisory: 'asc' },
+        { severity: 'desc' },
+        { detectedAt: 'asc' },
+      ],
       take: QUEUE_READ_CAP,
     })
   },

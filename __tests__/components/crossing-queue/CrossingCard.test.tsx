@@ -6,7 +6,8 @@
  * — one deliberate click, with the state hash it was read at — once every
  * section has loaded.
  */
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
+import { toast } from 'sonner'
 import { CrossingCard } from '@/app/workspace/[workspaceUrl]/components/pages/crossing-queue/CrossingCard'
 import { CardActions } from '@/app/workspace/[workspaceUrl]/components/pages/crossing-queue/CardActions'
 import { useCrossingCardActions } from '@/app/workspace/[workspaceUrl]/hooks/useCrossingQueue'
@@ -45,9 +46,9 @@ jest.mock(
   })
 )
 
-const ruleMutate = jest.fn()
+const ruleMutate = jest.fn(async (_payload: unknown): Promise<unknown> => ({}))
 ;(useCrossingCardActions as jest.Mock).mockReturnValue({
-  rule: { mutate: ruleMutate, isPending: false },
+  rule: { mutateAsync: ruleMutate, isPending: false },
   tag: { mutate: jest.fn(), isPending: false },
 })
 
@@ -137,7 +138,7 @@ function renderCard(ctx: CardContextView | null, onShuffle = jest.fn()) {
   )
 }
 
-beforeEach(() => ruleMutate.mockClear())
+beforeEach(() => jest.clearAllMocks())
 
 it('shows the task, its purpose and the turn intent on the face', () => {
   renderCard(context())
@@ -153,7 +154,7 @@ it('rules with one click, sending the state hash the card was read at', () => {
   renderCard(context())
   fireEvent.click(screen.getByTestId('crossing-card-false-positive'))
   expect(ruleMutate).toHaveBeenCalledTimes(1)
-  expect(ruleMutate.mock.calls[0][0]).toEqual({
+  expect(ruleMutate.mock.calls[0]?.[0]).toEqual({
     disposition: 'FALSE_POSITIVE',
     stateHash: 'h-1',
   })
@@ -191,4 +192,34 @@ it('shuffles without ruling', () => {
   fireEvent.click(screen.getByTestId('crossing-card-shuffle'))
   expect(onShuffle).toHaveBeenCalled()
   expect(ruleMutate).not.toHaveBeenCalled()
+})
+
+it('still toasts the ruling when the card unmounts before the write settles', async () => {
+  let settle: (v: unknown) => void = () => {}
+  ruleMutate.mockImplementationOnce(
+    () => new Promise<unknown>(resolve => (settle = resolve))
+  )
+  const { unmount } = render(
+    <CardActions
+      crossingId='bc-1'
+      context={context()}
+      members={[]}
+      onShuffle={jest.fn()}
+    />
+  )
+  fireEvent.click(screen.getByTestId('crossing-card-confirm'))
+  // The queue refresh deals the next card and this one goes away first.
+  unmount()
+  await act(async () => settle({}))
+  expect(toast.success).toHaveBeenCalledTimes(1)
+})
+
+it('toasts the error and not a success when the ruling is refused', async () => {
+  ruleMutate.mockRejectedValueOnce(new Error('This crossing changed'))
+  renderCard(context())
+  await act(async () => {
+    fireEvent.click(screen.getByTestId('crossing-card-false-positive'))
+  })
+  expect(toast.error).toHaveBeenCalledWith('This crossing changed')
+  expect(toast.success).not.toHaveBeenCalled()
 })

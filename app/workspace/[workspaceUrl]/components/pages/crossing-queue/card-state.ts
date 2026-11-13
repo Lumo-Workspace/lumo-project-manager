@@ -45,3 +45,8 @@ export function purposeExcerpt(
     .slice(0, lines)
   return kept.length > 0 ? kept.join('\n') : null
 }
+
+/** Blocking cards among the ones in view — the counter's second number. */
+export function countBlocking(cards: readonly { blocking: boolean }[]): number {
+  return cards.filter(c => c.blocking).length
+}

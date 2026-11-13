@@ -64,29 +64,30 @@ export function CardActions({
     context?.tagTargets.status === 'ok' ? context.tagTargets.data : []
   const nameOf = (id: string) => members.find(m => m.id === id)?.name ?? id
 
-  const onRule = (disposition: 'FALSE_POSITIVE' | 'CONFIRMED') => {
+  // A successful ruling refreshes the queue, which deals the next card and
+  // unmounts this one — per-call `mutate` callbacks would then never fire. The
+  // awaited promise settles regardless, so the toast always shows.
+  const onRule = async (disposition: 'FALSE_POSITIVE' | 'CONFIRMED') => {
     if (!stateHash) return
-    rule.mutate(
-      {
+    try {
+      await rule.mutateAsync({
         disposition,
         stateHash,
         ...(note.trim() ? { dispositionNote: note.trim() } : {}),
-      },
-      {
-        onSuccess: () => {
-          setNote('')
-          toast.success(
-            intl.formatMessage(
-              {
-                id: 'crossingQueue.toast.ruled',
-                defaultMessage: 'Ruled {ruling}',
-              },
-              { ruling: boundaryDispositionLabel(disposition, intl) }
-            )
-          )
+      })
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error))
+      return
+    }
+    setNote('')
+    toast.success(
+      intl.formatMessage(
+        {
+          id: 'crossingQueue.toast.ruled',
+          defaultMessage: 'Ruled {ruling}',
         },
-        onError: error => toast.error(error.message),
-      }
+        { ruling: boundaryDispositionLabel(disposition, intl) }
+      )
     )
   }
 
@@ -150,7 +151,7 @@ export function CardActions({
           size='sm'
           className={COMPACT_ICON}
           disabled={pending || !ready}
-          onClick={() => onRule('FALSE_POSITIVE')}
+          onClick={() => void onRule('FALSE_POSITIVE')}
           data-testid='crossing-card-false-positive'
         >
           <FlagOff aria-hidden />
@@ -162,7 +163,7 @@ export function CardActions({
           size='sm'
           className={TONE_DANGER}
           disabled={pending || !ready}
-          onClick={() => onRule('CONFIRMED')}
+          onClick={() => void onRule('CONFIRMED')}
           data-testid='crossing-card-confirm'
         >
           <AlertTriangle aria-hidden />
