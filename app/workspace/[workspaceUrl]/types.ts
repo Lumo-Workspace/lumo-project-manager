@@ -85,6 +85,7 @@ export type Page =
   | 'documents'
   | 'document-editor'
   | 'drafts'
+  | 'boundary-crossings'
   | 'sprints'
   | 'sprint-detail'
   | 'milestone-detail'
@@ -273,6 +274,7 @@ export interface ApiNotification {
     | 'PROJECT_MENTIONED'
     | 'MILESTONE_MENTIONED'
     | 'DOCUMENT_MENTIONED'
+    | 'CROSSING_TAGGED'
   read: boolean
   requiresAction: boolean
   actionTakenAt: string | null

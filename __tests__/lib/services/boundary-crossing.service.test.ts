@@ -157,6 +157,95 @@ describe('boundaryCrossingService.disposition', () => {
     expect(disposition).not.toHaveBeenCalled()
   })
 
+  describe('expectedStateHash (LUM-1336 queue cards)', () => {
+    const ROW = {
+      id: 'bc-1',
+      taskId: 't-1',
+      category: 'NEW_NPM_DEPENDENCY',
+      detail: 'npm install date-fns',
+      severity: 'MEDIUM',
+      occurrenceCount: 2,
+      lastSeenAt: new Date('2026-11-01T00:00:00Z'),
+      detectedAt: new Date('2026-10-30T00:00:00Z'),
+      disposition: null,
+    }
+
+    it('writes only if the row is still the one that was hashed', async () => {
+      findById.mockResolvedValue(ROW)
+      const hash = await boundaryCrossingService.stateHash('t-1', 'bc-1')
+      await boundaryCrossingService.disposition(
+        't-1',
+        'bc-1',
+        'FALSE_POSITIVE',
+        null,
+        ATTRIB,
+        { expectedStateHash: hash }
+      )
+      expect(disposition).toHaveBeenCalledWith(
+        'bc-1',
+        'FALSE_POSITIVE',
+        null,
+        'actor-1',
+        expect.any(Date),
+        {
+          disposition: null,
+          occurrenceCount: 2,
+          lastSeenAt: ROW.lastSeenAt,
+          severity: 'MEDIUM',
+          detail: 'npm install date-fns',
+        }
+      )
+      expect(createActivity).toHaveBeenCalledTimes(1)
+    })
+
+    it('refuses a stale hash with 409 and writes nothing', async () => {
+      findById.mockResolvedValue(ROW)
+      await expect(
+        boundaryCrossingService.disposition(
+          't-1',
+          'bc-1',
+          'FALSE_POSITIVE',
+          null,
+          ATTRIB,
+          { expectedStateHash: 'not-the-current-hash' }
+        )
+      ).rejects.toMatchObject({ status: 409 })
+      expect(disposition).not.toHaveBeenCalled()
+      expect(createActivity).not.toHaveBeenCalled()
+    })
+
+    it('refuses with 409 when the row changes between the check and the write', async () => {
+      findById.mockResolvedValue(ROW)
+      const hash = await boundaryCrossingService.stateHash('t-1', 'bc-1')
+      // A concurrent ruling or recurrence lands first: the guarded write
+      // matches no row.
+      disposition.mockResolvedValue({ count: 0 })
+      await expect(
+        boundaryCrossingService.disposition(
+          't-1',
+          'bc-1',
+          'CONFIRMED',
+          null,
+          ATTRIB,
+          { expectedStateHash: hash }
+        )
+      ).rejects.toMatchObject({ status: 409 })
+      expect(createActivity).not.toHaveBeenCalled()
+    })
+
+    it('leaves the unguarded Record-tab write unchanged', async () => {
+      findById.mockResolvedValue(ROW)
+      await boundaryCrossingService.disposition(
+        't-1',
+        'bc-1',
+        'CONFIRMED',
+        null,
+        ATTRIB
+      )
+      expect(disposition.mock.calls[0]).toHaveLength(5)
+    })
+  })
+
   it('is idempotent: re-dispositioning an already-dispositioned crossing writes no second marker', async () => {
     findById.mockResolvedValue({
       id: 'bc-1',

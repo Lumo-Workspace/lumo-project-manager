@@ -45,6 +45,9 @@ jest.mock('@/app/workspace/[workspaceUrl]/hooks/useWorkspaceTeams', () => ({
 jest.mock('@/app/workspace/[workspaceUrl]/hooks/useProjects', () => ({
   useProjects: () => ({ projects: [], setProjects: jest.fn() }),
 }))
+jest.mock('@/app/workspace/[workspaceUrl]/hooks/useCrossingQueue', () => ({
+  useCrossingQueueBadge: () => 0,
+}))
 jest.mock('@/app/workspace/[workspaceUrl]/cache', () => ({
   clearCache: jest.fn(),
 }))

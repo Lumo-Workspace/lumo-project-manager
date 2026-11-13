@@ -280,6 +280,10 @@ export const AUDIT_EXEMPT: Readonly<Record<AuditUnit, string>> = {
   // LUM-907 PR2: reading the audit log itself (list + CSV export).
   'lib/services/audit-query.service.ts#assertOwner': GATE_HELPER,
   'lib/services/audit-query.service.ts#listAuditEvents': READ_ONLY,
+  // LUM-1336: the Boundary Crossings queue — OWNERs see every task's open
+  // crossings, others only their own; ruling from a card is audited through
+  // boundaryCrossingService.disposition.
+  'lib/services/crossing-queue.service.ts#getQueue': READ_ONLY,
   // LUM-907 PR3 ruling: per-member document shares are routine
   // collaboration (who on the team may read or edit one page), not a change
   // of who OUTSIDE can read it; visibility and the public link are audited.

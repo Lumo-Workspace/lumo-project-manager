@@ -99,15 +99,17 @@ it('waitlist dismiss/restore: only PENDING rows move, dismissed emails stay dism
     'bogus@invalid.test',
   ])
 
-  await expect(waitlistAdmin.approve(pending.id, ADMIN)).rejects.toMatchObject(
-    { status: 409, code: 'WAITLIST_DISMISSED' }
-  )
+  await expect(waitlistAdmin.approve(pending.id, ADMIN)).rejects.toMatchObject({
+    status: 409,
+    code: 'WAITLIST_DISMISSED',
+  })
 
   const restored = await waitlistAdmin.restore(pending.id, ADMIN)
   expect(restored.entry.status).toBe('PENDING')
-  await expect(waitlistAdmin.restore(pending.id, ADMIN)).rejects.toMatchObject(
-    { status: 409, code: 'WAITLIST_NOT_DISMISSED' }
-  )
+  await expect(waitlistAdmin.restore(pending.id, ADMIN)).rejects.toMatchObject({
+    status: 409,
+    code: 'WAITLIST_NOT_DISMISSED',
+  })
 
   const audit = await db().platformAdminAuditEvent.findMany({
     where: { adminUserId: ADMIN },

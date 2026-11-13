@@ -46,3 +46,4 @@ export type {
 export { lineageClient } from './lineage'
 export { mentionSearchClient } from './mention-search'
 export { testCasesClient } from './test-cases'
+export { boundaryCrossingQueueClient } from './boundary-crossing-queue'

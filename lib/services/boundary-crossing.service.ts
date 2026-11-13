@@ -88,6 +88,12 @@ export interface DispositionOptions {
   /** LUM-963: `directory` widens the rule to every file under the crossing's
    *  directory (SENSITIVE_PATH_READ only); default `exact`. */
   suppressionScope?: SuppressionScope
+  /** LUM-1336: the {@link boundaryCrossingService.stateHash} the caller read.
+   *  The ruling is refused (409) when the crossing no longer hashes to it, and
+   *  the write itself only lands if the row is still the one that was hashed
+   *  — a concurrent ruling or recurrence between check and write loses the
+   *  race instead of being silently overwritten. */
+  expectedStateHash?: string
 }
 
 export interface DispositionOutcome {
@@ -749,6 +755,37 @@ const SEVERITY_RANK: Record<BoundaryCrossingSeverity, number> = {
   LOW: 1,
 }
 
+type StoredCrossing = NonNullable<
+  Awaited<ReturnType<typeof boundaryCrossingRepository.findById>>
+>
+
+/** The state hash of a crossing row already in hand (plus its explanations). */
+async function hashCrossing(crossing: StoredCrossing): Promise<string> {
+  const explanations =
+    await boundaryCrossingRepository.listExplanationsByCrossingIds([
+      crossing.id,
+    ])
+  return crossingStateHash({
+    disposition: crossing.disposition,
+    occurrenceCount: crossing.occurrenceCount ?? 1,
+    lastSeenAt: crossing.lastSeenAt,
+    detectedAt: crossing.detectedAt,
+    severity: crossing.severity,
+    category: crossing.category,
+    detail: crossing.detail,
+    explanationIds: explanations.map(e => e.id),
+  })
+}
+
+function staleCrossingError(): Error {
+  return Object.assign(
+    new Error(
+      'This crossing changed since it was loaded — review it again before ruling'
+    ),
+    { status: 409 }
+  )
+}
+
 export const boundaryCrossingService = {
   /**
    * Whether the workspace's DONE gate is enabled (LUM-426 toggle). Surfaced on
@@ -1047,6 +1084,14 @@ export const boundaryCrossingService = {
         { status: 404 }
       )
     }
+    // LUM-1336: the stale-read check runs on the very row the guarded write
+    // below is conditioned on, so check and write can't see two versions.
+    if (
+      options.expectedStateHash != null &&
+      (await hashCrossing(crossing)) !== options.expectedStateHash
+    ) {
+      throw staleCrossingError()
+    }
 
     // LUM-751: a FALSE_POSITIVE may opt the whole repository out of this
     // (category, target) shape. Checked and written BEFORE the disposition so a
@@ -1175,13 +1220,29 @@ export const boundaryCrossingService = {
 
     const writerActorId = await actorId()
 
-    await boundaryCrossingRepository.disposition(
+    const writeArgs = [
       crossingId,
       target,
       note,
       writerActorId,
-      new Date()
-    )
+      new Date(),
+    ] as const
+    if (options.expectedStateHash != null) {
+      // LUM-1336: compare-and-set on the row the hash was checked against.
+      const written = await boundaryCrossingRepository.disposition(
+        ...writeArgs,
+        {
+          disposition: from,
+          occurrenceCount: crossing.occurrenceCount ?? 1,
+          lastSeenAt: crossing.lastSeenAt,
+          severity: crossing.severity,
+          detail: crossing.detail,
+        }
+      )
+      if (written.count === 0) throw staleCrossingError()
+    } else {
+      await boundaryCrossingRepository.disposition(...writeArgs)
+    }
     // Append-only audit of THIS change. `from`/`to` carry the transition (null
     // = OPEN on either side); `disposition` mirrors the new value for back-compat
     // with existing timeline readers. A later change appends another row — it
@@ -1328,17 +1389,6 @@ export const boundaryCrossingService = {
     target: 'FALSE_POSITIVE' | 'CONFIRMED',
     caller: ReceiptCaller
   ): Promise<ReceiptSubject> {
-    const crossing = await boundaryCrossingRepository.findById(crossingId)
-    if (!crossing || crossing.taskId !== taskId) {
-      throw Object.assign(
-        new Error('Boundary-crossing not found on this task'),
-        { status: 404 }
-      )
-    }
-    const explanations =
-      await boundaryCrossingRepository.listExplanationsByCrossingIds([
-        crossingId,
-      ])
     return {
       // LUM-812: the handshake is shared with the test-case defect plane, so
       // the subject carries its kind — a crossing receipt can never be replayed
@@ -1349,17 +1399,25 @@ export const boundaryCrossingService = {
       target,
       sessionId: caller.sessionId,
       memberId: caller.memberId,
-      stateHash: crossingStateHash({
-        disposition: crossing.disposition,
-        occurrenceCount: crossing.occurrenceCount ?? 1,
-        lastSeenAt: crossing.lastSeenAt,
-        detectedAt: crossing.detectedAt,
-        severity: crossing.severity,
-        category: crossing.category,
-        detail: crossing.detail,
-        explanationIds: explanations.map(e => e.id),
-      }),
+      stateHash: await this.stateHash(taskId, crossingId),
     }
+  },
+
+  /**
+   * The hash of a crossing as it stands now — disposition, recurrence,
+   * explanations, detail… Any change between a read and a write changes it,
+   * so a ruling made against what was read can be refused when it is stale
+   * (LUM-769 receipts; LUM-1336 queue cards). 404 off-task.
+   */
+  async stateHash(taskId: string, crossingId: string): Promise<string> {
+    const crossing = await boundaryCrossingRepository.findById(crossingId)
+    if (!crossing || crossing.taskId !== taskId) {
+      throw Object.assign(
+        new Error('Boundary-crossing not found on this task'),
+        { status: 404 }
+      )
+    }
+    return hashCrossing(crossing)
   },
 
   requireReceiptSecret(): string {

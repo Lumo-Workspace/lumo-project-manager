@@ -37,6 +37,8 @@ export function pageToPath(
       return `${base}/documents/${project?.slug ?? project?.id ?? ''}`
     case 'drafts':
       return `${base}/drafts`
+    case 'boundary-crossings':
+      return `${base}/boundary-crossings`
     case 'sprints':
       return `${base}/sprints`
     case 'sprint-detail':

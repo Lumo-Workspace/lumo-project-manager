@@ -19,6 +19,8 @@ export const STORAGE_REDACTED_FIELDS = {
   // LUM-1303: decisions moved out of Task.description, which is redacted.
   taskDecision: ['text', 'rationale'],
   boundaryCrossingExplanation: ['note'],
+  // LUM-1336: the optional message a member writes when tagging a teammate.
+  boundaryCrossingTag: ['message'],
   taskActivity: ['payload'],
   // Column-scoped: the other stock-scanned columns of these two tables are
   // written by detectors / the run recorder, not free text (LUM-898 follow-up)

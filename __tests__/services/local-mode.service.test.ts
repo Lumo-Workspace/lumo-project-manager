@@ -113,15 +113,13 @@ describe('localModeService.ensureWorkspace', () => {
 
 describe('localModeService.ensureWorkspace race', () => {
   it('the losing parallel first use never makes a second, suffixed workspace', async () => {
-    mockFindMembers
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([
-        {
-          id: 'm_won',
-          workspaceId: 'ws_won',
-          workspace: { slug: 'my-workspace' },
-        },
-      ])
+    mockFindMembers.mockResolvedValueOnce([]).mockResolvedValueOnce([
+      {
+        id: 'm_won',
+        workspaceId: 'ws_won',
+        workspace: { slug: 'my-workspace' },
+      },
+    ])
     // By now the winner holds the slug.
     mockIsSlugUnique.mockResolvedValue(false)
     mockCreateWorkspace.mockRejectedValue(

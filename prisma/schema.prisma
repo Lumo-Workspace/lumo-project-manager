@@ -112,6 +112,7 @@ enum NotificationType {
   PROJECT_MENTIONED // @mentioned in a project description
   MILESTONE_MENTIONED // @mentioned in a milestone description
   DOCUMENT_MENTIONED // @mentioned in a document body
+  CROSSING_TAGGED // LUM-1336: a teammate tagged you on a boundary crossing to rule on
 }
 
 enum CommentType {
@@ -828,6 +829,8 @@ model WorkspaceMember {
   taskFigmaLinks          TaskFigmaLink[]          @relation("TaskFigmaLinkCreator")
   documentRevisions       DocumentRevision[]
   submittedFeedback       Feedback[]               @relation("FeedbackSubmitter")
+  crossingTagsReceived    BoundaryCrossingTag[]    @relation("CrossingTagTarget")
+  crossingTagsSent        BoundaryCrossingTag[]    @relation("CrossingTagAuthor")
 
   @@unique([workspaceId, clerkId])
   @@index([clerkId])
@@ -1530,6 +1533,8 @@ model BoundaryCrossing {
   // LUM-542: append-only agent self-explanations ("申辩"). A purely additive
   // annotation layer — never read by the DONE gate, never a disposition.
   explanations    BoundaryCrossingExplanation[]
+  // LUM-1336: append-only "please rule on this" hand-offs from the queue tab.
+  tags            BoundaryCrossingTag[]
 
   @@index([taskId, disposition])
   // Supports the LUM-477 open-crossing coalescing lookup (taskId, category, target).
@@ -1568,6 +1573,26 @@ model BoundaryCrossingExplanation {
 
   @@index([crossingId, createdAt])
   @@map("boundary_crossing_explanations")
+}
+
+// LUM-1336: a member handing an open crossing to another member who may rule
+// on it (the task's assignee or a workspace OWNER). Append-only: a request,
+// never a ruling — it never touches disposition or the DONE gate.
+model BoundaryCrossingTag {
+  id             String   @id @default(cuid())
+  crossingId     String
+  taggedMemberId String
+  taggedById     String
+  message        String?
+  createdAt      DateTime @default(now())
+
+  crossing     BoundaryCrossing @relation(fields: [crossingId], references: [id], onDelete: Cascade)
+  taggedMember WorkspaceMember  @relation("CrossingTagTarget", fields: [taggedMemberId], references: [id], onDelete: Cascade)
+  taggedBy     WorkspaceMember  @relation("CrossingTagAuthor", fields: [taggedById], references: [id], onDelete: Cascade)
+
+  @@index([crossingId, createdAt])
+  @@index([taggedMemberId, createdAt])
+  @@map("boundary_crossing_tags")
 }
 
 // ── LUM-732: PR security scan ───────────────────────────────────────────────

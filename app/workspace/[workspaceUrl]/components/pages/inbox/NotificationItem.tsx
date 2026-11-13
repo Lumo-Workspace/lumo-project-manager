@@ -162,6 +162,10 @@ export function NotificationItem({
       id: 'notification.verb.documentCommentMentioned',
       defaultMessage: 'mentioned you in a comment on',
     }),
+    CROSSING_TAGGED: intlLocal.formatMessage({
+      id: 'notification.verb.crossingTagged',
+      defaultMessage: 'asked you to rule on a boundary crossing on',
+    }),
   }
   const verb =
     VERB[type] ??

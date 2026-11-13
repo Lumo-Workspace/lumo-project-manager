@@ -15,6 +15,8 @@ const INAPP_MAP: Partial<Record<NotificationType, string>> = {
   PROJECT_MENTIONED: 'notifyInAppMention',
   MILESTONE_MENTIONED: 'notifyInAppMention',
   DOCUMENT_MENTIONED: 'notifyInAppMention',
+  // LUM-1336: a tag is a direct ask from a teammate, like a mention.
+  CROSSING_TAGGED: 'notifyInAppMention',
   AGENT_DONE: 'notifyInAppAgentDone',
   AGENT_FAILED: 'notifyInAppAgentDone',
   AGENT_VERIFY: 'notifyInAppAgentDone',

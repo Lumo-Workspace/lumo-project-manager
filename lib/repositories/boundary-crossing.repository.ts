@@ -252,6 +252,15 @@ async function insertCrossing(
   })
 }
 
+/** LUM-1336: the row values a guarded disposition write must still find. */
+export interface DispositionGuard {
+  disposition: BoundaryCrossingDisposition | null
+  occurrenceCount: number
+  lastSeenAt: Date | null
+  severity: BoundaryCrossingSeverity
+  detail: string
+}
+
 /**
  * Persistence for boundary-crossing markers (LUM-426/435). The marker mirrors
  * onto a TaskActivity for the timeline; this table holds the mutable
@@ -749,10 +758,13 @@ export const boundaryCrossingRepository = {
     disposition: BoundaryCrossingDisposition | null,
     note: string | null,
     actorId: string | null,
-    now: Date
+    now: Date,
+    /** LUM-1336: write only if the row still holds these values (compare-and-
+     *  set); `count` is 0 when it changed underneath the caller. */
+    unchangedSince?: DispositionGuard
   ) {
     return prisma.boundaryCrossing.updateMany({
-      where: { id },
+      where: { id, ...(unchangedSince ?? {}) },
       data: {
         disposition,
         dispositionNote:
