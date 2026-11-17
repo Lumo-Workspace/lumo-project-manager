@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react'
 
 /**
- * Live content-box width of an element, or `null` until it has been measured
- * (and where ResizeObserver is unavailable, e.g. jsdom). ResizeObserver
+ * Live inner width of an element (`clientWidth`: padding included, border and
+ * scrollbar excluded), or `null` until it has been measured (and where
+ * ResizeObserver is unavailable, e.g. jsdom). ResizeObserver
  * reports once on `observe()`, after layout and before paint, so the first
  * measurement lands without a visible frame at the unmeasured value.
  */
