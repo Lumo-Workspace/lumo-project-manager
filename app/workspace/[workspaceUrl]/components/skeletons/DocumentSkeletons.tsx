@@ -2,6 +2,11 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Card } from '@/components/ui/card'
 import { LINE, ROW_WIDTHS, SkeletonLine, rowDelay } from './SkeletonLine'
 
+/** Grid and card shell shared by the real document cards and their skeleton. */
+export const DOCUMENT_GRID_CLASS =
+  'grid grid-cols-1 gap-4 pb-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4'
+export const DOCUMENT_CARD_CLASS = 'flex h-44 flex-col p-4'
+
 /**
  * The Documents list while it loads — DocumentsPage's list row shell
  * (`px-3 py-2.5`, emoji, title + subtitle, creator, updated-at) so the rows
@@ -59,23 +64,23 @@ export function DocumentListSkeleton({ rows = 8 }: { rows?: number }) {
 }
 
 /** Preview line widths inside each grid card. */
-const PREVIEW_LINES = ['94%', '86%', '90%', '72%', '58%']
+const PREVIEW_LINES = ['94%', '86%', '62%']
 
 /**
- * The Documents grid while it loads — the same `h-64 p-4` Card shell as a
- * real document card: emoji + title, preview lines, creator footer.
+ * The Documents grid while it loads — the same Card shell as a real
+ * document card: emoji + title, preview lines, creator footer.
  */
 export function DocumentGridSkeleton({ cards = 6 }: { cards?: number }) {
   return (
     <div
       aria-hidden
       data-testid='document-grid-skeleton'
-      className='grid grid-cols-1 gap-8 pb-4 sm:grid-cols-2 lg:grid-cols-3'
+      className={DOCUMENT_GRID_CLASS}
     >
       {Array.from({ length: cards }, (_, i) => {
         const delay = rowDelay(i)
         return (
-          <Card key={i} className='flex h-64 flex-col p-4'>
+          <Card key={i} className={DOCUMENT_CARD_CLASS}>
             <div className='flex items-center gap-2'>
               <Skeleton
                 className='size-5 shrink-0 rounded-md'
@@ -88,7 +93,7 @@ export function DocumentGridSkeleton({ cards = 6 }: { cards?: number }) {
                 className='flex-1'
               />
             </div>
-            <div className='mt-3 flex-1 overflow-hidden'>
+            <div className='mt-2 flex-1 overflow-hidden'>
               {PREVIEW_LINES.map((width, j) => (
                 <SkeletonLine
                   key={j}

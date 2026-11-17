@@ -32,6 +32,7 @@ import {
   type PickerTemplate,
 } from './document/DocumentTemplatePicker'
 import { documentTemplatesClient } from '@/lib/api-client'
+import { copyLink } from '@/lib/utils/copyLink'
 
 type NotificationsBundle = Omit<
   ReturnType<typeof useRealtimeNotifications>,
@@ -324,6 +325,11 @@ export function WorkspacePageRouter(props: Props) {
               documentHandlers.navigateToDocument(doc.slug)
             }
             onDeleteDocument={documentHandlers.handleDeleteDocument}
+            onCopyLink={doc =>
+              void copyLink(
+                `${window.location.origin}/workspace/${workspaceUrl}/documents/${doc.slug}`
+              )
+            }
           />
           {templatePicker}
         </div>

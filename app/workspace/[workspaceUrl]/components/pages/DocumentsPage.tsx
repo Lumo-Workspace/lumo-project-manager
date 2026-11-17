@@ -32,6 +32,8 @@ import {
 } from '@/components/ui/alert-dialog'
 import { AsyncContent } from '../AsyncContent'
 import {
+  DOCUMENT_CARD_CLASS,
+  DOCUMENT_GRID_CLASS,
   DocumentGridSkeleton,
   DocumentListSkeleton,
 } from '../skeletons/DocumentSkeletons'
@@ -54,6 +56,8 @@ interface DocumentsPageProps {
   onNewDocument: () => void
   onSelectDocument: (doc: ApiDocument) => void
   onDeleteDocument: (id: string) => void
+  /** Copy the document's URL — the page doesn't know the workspace route. */
+  onCopyLink: (doc: ApiDocument) => void
 }
 
 const FILTERS: { key: DocVisibility | 'ALL'; msgId: string }[] = [
@@ -62,6 +66,17 @@ const FILTERS: { key: DocVisibility | 'ALL'; msgId: string }[] = [
   { key: 'SHARED', msgId: 'documents.filterShared' },
   { key: 'WORKSPACE', msgId: 'documents.filterWorkspace' },
 ]
+
+/**
+ * One column template shared by the header and every row, so cells line up
+ * whatever their content: title · tags · creator · collaborators · updated ·
+ * menu. Narrower viewports drop tags/collaborators, then creator.
+ */
+const LIST_GRID_CLASS =
+  'grid items-center gap-x-4 px-3 grid-cols-[minmax(0,1fr)_6.5rem_1.5rem] lg:grid-cols-[minmax(0,1fr)_10rem_6.5rem_1.5rem] xl:grid-cols-[minmax(0,1fr)_11rem_12rem_4.5rem_6.5rem_1.5rem]'
+
+const OPEN_BUTTON_CLASS =
+  'block max-w-full truncate text-left text-body-strong outline-none after:absolute after:inset-0 focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-ring'
 
 type SortKey = 'updatedAt' | 'createdAt' | 'title'
 
@@ -86,6 +101,7 @@ export function DocumentsPage({
   onNewDocument,
   onSelectDocument,
   onDeleteDocument,
+  onCopyLink,
 }: DocumentsPageProps) {
   const intl = useIntl()
   const [search, setSearch] = useState('')
@@ -131,13 +147,47 @@ export function DocumentsPage({
     localStorage.setItem(CACHE_KEY.docSort, key)
   }
 
+  /** Where the document lives: its project, else its visibility scope. */
   function getSubtitle(doc: ApiDocument): string {
-    if (doc.project) return `in ${doc.project.name}`
+    if (doc.project) return doc.project.name
     if (doc.visibility === 'PRIVATE')
       return intl.formatMessage({ id: 'documents.filterPersonal' })
     if (doc.visibility === 'SHARED')
       return intl.formatMessage({ id: 'documents.filterShared' })
     return intl.formatMessage({ id: 'documents.filterWorkspace' })
+  }
+
+  function getTitle(doc: ApiDocument): string {
+    return (
+      doc.title ||
+      intl.formatMessage({
+        id: 'documents.untitled',
+        defaultMessage: 'Untitled',
+      })
+    )
+  }
+
+  function renderTags(doc: ApiDocument) {
+    if (doc.docTags && doc.docTags.length > 0)
+      return <TagListNew tags={doc.docTags} max={2} />
+    if (doc.tags && doc.tags.length > 0)
+      return <TagList tags={doc.tags} max={2} />
+    return null
+  }
+
+  // The title button stretches over the whole row/card (`after:inset-0`), so
+  // the row opens by mouse and by keyboard without nesting the menu inside
+  // another control. The menu sits above it (`relative z-10`).
+  function renderOpenButton(doc: ApiDocument, className?: string) {
+    return (
+      <button
+        type='button'
+        className={cn(OPEN_BUTTON_CLASS, className)}
+        onClick={() => onSelectDocument(doc)}
+      >
+        {getTitle(doc)}
+      </button>
+    )
   }
 
   function renderRowMenu(doc: ApiDocument) {
@@ -147,27 +197,20 @@ export function DocumentsPage({
           <Button
             variant='ghost'
             size='icon'
-            className='size-6 opacity-0 group-hover:opacity-100'
-            onClick={e => e.stopPropagation()}
+            aria-label={intl.formatMessage({ id: 'common.moreActions' })}
+            className='relative z-10 size-6 opacity-0 focus-visible:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100'
           >
             <MoreHorizontal className='size-3.5' />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align='end'>
-          <DropdownMenuItem
-            onClick={e => {
-              e.stopPropagation()
-            }}
-          >
+          <DropdownMenuItem onClick={() => onCopyLink(doc)}>
             <Link className='size-3.5 mr-2' />
             {intl.formatMessage({ id: 'documents.copyLink' })}
           </DropdownMenuItem>
           <DropdownMenuItem
             className='text-danger-text'
-            onClick={e => {
-              e.stopPropagation()
-              setDeleteId(doc.id)
-            }}
+            onClick={() => setDeleteId(doc.id)}
           >
             <Trash2 className='size-3.5 mr-2' />
             {intl.formatMessage({ id: 'documents.delete' })}
@@ -179,93 +222,120 @@ export function DocumentsPage({
 
   function renderListView() {
     return (
-      <div className='divide-y divide-border'>
-        {sorted.map(doc => (
+      <div role='table' className='pb-4'>
+        <div role='rowgroup'>
           <div
-            key={doc.id}
-            className='flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-muted/50 cursor-pointer transition-colors group'
-            onClick={() => onSelectDocument(doc)}
+            role='row'
+            className={cn(
+              LIST_GRID_CLASS,
+              'border-b border-border py-2 text-caption text-muted-foreground'
+            )}
           >
-            <span className='text-title shrink-0'>{doc.emoji ?? '📄'}</span>
-            <div className='min-w-0 flex-1'>
-              <div className='text-body-strong truncate'>
-                {doc.title ||
-                  intl.formatMessage({
-                    id: 'documents.untitled',
-                    defaultMessage: 'Untitled',
-                  })}
-              </div>
-              <div className='text-caption text-muted-foreground truncate'>
-                {getSubtitle(doc)}
-              </div>
-            </div>
-            {/* Creator */}
-            <span className='flex items-center gap-1.5 shrink-0 hidden sm:flex'>
-              <MemberAvatar
-                decorative
-                name={doc.createdBy.name}
-                imageUrl={doc.createdBy.imageUrl}
-                size='xs'
-              />
-              <span className='text-caption text-muted-foreground'>
-                {doc.createdBy.name}
+            <span role='columnheader'>
+              {intl.formatMessage({ id: 'documents.colName' })}
+            </span>
+            <span role='columnheader' className='hidden xl:block'>
+              {intl.formatMessage({ id: 'documents.colTags' })}
+            </span>
+            <span role='columnheader' className='hidden lg:block'>
+              {intl.formatMessage({ id: 'documents.colCreator' })}
+            </span>
+            <span role='columnheader' className='hidden xl:block'>
+              {intl.formatMessage({ id: 'documents.colCollaborators' })}
+            </span>
+            <span role='columnheader' className='text-right'>
+              {intl.formatMessage({ id: 'documents.colUpdatedAt' })}
+            </span>
+            <span role='columnheader'>
+              <span className='sr-only'>
+                {intl.formatMessage({ id: 'common.moreActions' })}
               </span>
             </span>
-            {/* Creator avatar only on mobile */}
-            <span className='shrink-0 sm:hidden'>
-              <MemberAvatar
-                name={doc.createdBy.name}
-                imageUrl={doc.createdBy.imageUrl}
-                size='xs'
-              />
-            </span>
-            {doc.docTags && doc.docTags.length > 0 ? (
-              <div className='shrink-0 hidden sm:block'>
-                <TagListNew tags={doc.docTags} max={2} />
-              </div>
-            ) : doc.tags && doc.tags.length > 0 ? (
-              <div className='shrink-0 hidden sm:block'>
-                <TagList tags={doc.tags} max={2} />
-              </div>
-            ) : null}
-            {doc.editors && doc.editors.length > 0 && (
-              <div className='shrink-0 hidden sm:block'>
-                <CollaboratorAvatars editors={doc.editors} max={3} />
-              </div>
-            )}
-            <span className='text-caption text-muted-foreground w-16 text-right shrink-0'>
-              {formatRelativeTime(doc.updatedAt, intl.locale)}
-            </span>
-            {renderRowMenu(doc)}
           </div>
-        ))}
+        </div>
+        <div role='rowgroup' className='divide-y divide-border'>
+          {sorted.map(doc => (
+            <div
+              key={doc.id}
+              role='row'
+              className={cn(
+                LIST_GRID_CLASS,
+                'group relative py-2.5 transition-colors hover:bg-muted/50'
+              )}
+            >
+              <div role='cell' className='flex min-w-0 items-center gap-3'>
+                <span aria-hidden className='shrink-0 text-title'>
+                  {doc.emoji ?? '📄'}
+                </span>
+                <div className='min-w-0 flex-1'>
+                  {renderOpenButton(doc)}
+                  <div className='truncate text-caption text-muted-foreground'>
+                    {getSubtitle(doc)}
+                  </div>
+                </div>
+              </div>
+              <div
+                role='cell'
+                className='hidden min-w-0 overflow-hidden xl:block'
+              >
+                {renderTags(doc)}
+              </div>
+              <div
+                role='cell'
+                className='hidden min-w-0 items-center gap-1.5 lg:flex'
+              >
+                <MemberAvatar
+                  decorative
+                  name={doc.createdBy.name}
+                  imageUrl={doc.createdBy.imageUrl}
+                  size='xs'
+                />
+                <span className='truncate text-caption text-muted-foreground'>
+                  {doc.createdBy.name}
+                </span>
+              </div>
+              <div role='cell' className='hidden xl:block'>
+                {doc.editors && doc.editors.length > 0 && (
+                  <CollaboratorAvatars editors={doc.editors} max={3} />
+                )}
+              </div>
+              <span
+                role='cell'
+                className='whitespace-nowrap text-right text-caption tabular-nums text-muted-foreground'
+              >
+                {formatRelativeTime(doc.updatedAt, intl.locale)}
+              </span>
+              <div role='cell' className='flex justify-end'>
+                {renderRowMenu(doc)}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
 
   function renderBoardView() {
     return (
-      <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 pb-4'>
+      <div className={DOCUMENT_GRID_CLASS}>
         {sorted.map(doc => (
           <Card
             key={doc.id}
-            className='group flex h-64 cursor-pointer flex-col p-4 transition-colors hover:bg-muted/50'
-            onClick={() => onSelectDocument(doc)}
+            className={cn(
+              DOCUMENT_CARD_CLASS,
+              'group relative transition-colors hover:bg-muted/50'
+            )}
           >
             <div className='flex items-start justify-between gap-2'>
               <div className='flex min-w-0 items-center gap-2'>
-                <span className='shrink-0 text-title'>{doc.emoji ?? '📄'}</span>
-                <span className='truncate text-body-strong'>
-                  {doc.title ||
-                    intl.formatMessage({
-                      id: 'documents.untitled',
-                      defaultMessage: 'Untitled',
-                    })}
+                <span aria-hidden className='shrink-0 text-title'>
+                  {doc.emoji ?? '📄'}
                 </span>
+                {renderOpenButton(doc, 'after:rounded-lg')}
               </div>
               {renderRowMenu(doc)}
             </div>
-            <div className='mt-3 flex-1 overflow-hidden text-caption text-muted-foreground whitespace-pre-line line-clamp-6'>
+            <div className='mt-2 flex-1 overflow-hidden text-caption text-muted-foreground whitespace-pre-line line-clamp-3'>
               {doc.preview ?? ''}
             </div>
             <div className='mt-3 flex items-center gap-2'>
@@ -274,12 +344,12 @@ export function DocumentsPage({
                 imageUrl={doc.createdBy.imageUrl}
                 size='xs'
               />
-              <span className='truncate text-caption text-muted-foreground'>
-                {intl.formatMessage(
-                  { id: 'documents.editedAt' },
-                  { time: formatRelativeTime(doc.updatedAt, intl.locale) }
-                )}
+              <span className='min-w-0 flex-1 truncate text-caption text-muted-foreground'>
+                {getSubtitle(doc)}
+                {' · '}
+                {formatRelativeTime(doc.updatedAt, intl.locale)}
               </span>
+              <div className='shrink-0'>{renderTags(doc)}</div>
             </div>
           </Card>
         ))}
@@ -308,7 +378,7 @@ export function DocumentsPage({
         }
       />
 
-      <div className='px-4 md:px-8 pt-4 pb-4 flex items-center gap-2 shrink-0'>
+      <div className='mx-auto w-full max-w-[1680px] px-4 md:px-8 pt-4 pb-4 flex items-center gap-2 shrink-0'>
         {FILTERS.map(f => (
           <button
             key={f.key}
@@ -348,36 +418,38 @@ export function DocumentsPage({
         </div>
       </div>
 
-      <div className='flex-1 overflow-y-auto px-4 md:px-8'>
-        <AsyncContent
-          loading={loading}
-          error={error}
-          onRetry={onRetry}
-          loadingState={
-            viewMode === 'list' ? (
-              <DocumentListSkeleton />
-            ) : (
-              <DocumentGridSkeleton />
-            )
-          }
-          empty={sorted.length === 0}
-          emptyState={
-            <Empty>
-              <EmptyHeader>
-                <EmptyDescription>
-                  {intl.formatMessage({
-                    id:
-                      search || filter !== 'ALL'
-                        ? 'documents.emptyFiltered'
-                        : 'documents.empty',
-                  })}
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          }
-        >
-          {viewMode === 'list' ? renderListView() : renderBoardView()}
-        </AsyncContent>
+      <div className='flex-1 overflow-y-auto'>
+        <div className='mx-auto w-full max-w-[1680px] px-4 md:px-8'>
+          <AsyncContent
+            loading={loading}
+            error={error}
+            onRetry={onRetry}
+            loadingState={
+              viewMode === 'list' ? (
+                <DocumentListSkeleton />
+              ) : (
+                <DocumentGridSkeleton />
+              )
+            }
+            empty={sorted.length === 0}
+            emptyState={
+              <Empty>
+                <EmptyHeader>
+                  <EmptyDescription>
+                    {intl.formatMessage({
+                      id:
+                        search || filter !== 'ALL'
+                          ? 'documents.emptyFiltered'
+                          : 'documents.empty',
+                    })}
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            }
+          >
+            {viewMode === 'list' ? renderListView() : renderBoardView()}
+          </AsyncContent>
+        </div>
       </div>
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
