@@ -27,20 +27,21 @@ export function DocumentBreadcrumb({
   })
 
   return (
-    <nav className='flex items-center gap-1 text-caption text-muted-foreground'>
+    <nav className='flex min-w-0 items-center gap-1 overflow-hidden whitespace-nowrap text-caption text-muted-foreground'>
       <button
         type='button'
-        className='hover:text-foreground transition-colors'
+        className='shrink-0 hover:text-foreground transition-colors'
         onClick={() => onNavigate(null)}
       >
         {intl.formatMessage({ id: 'sidebar.documents' })}
       </button>
       {ancestors.map(item => (
-        <span key={item.id} className='flex items-center gap-1'>
-          <ChevronRight className='size-3' />
+        <span key={item.id} className='flex shrink-0 items-center gap-1'>
+          <ChevronRight className='size-3 shrink-0' />
           <button
             type='button'
-            className='hover:text-foreground transition-colors'
+            title={item.title || untitledLabel}
+            className='max-w-40 truncate hover:text-foreground transition-colors'
             onClick={() => onNavigate(item.id)}
           >
             {item.emoji ? `${item.emoji} ` : ''}
@@ -48,8 +49,8 @@ export function DocumentBreadcrumb({
           </button>
         </span>
       ))}
-      <ChevronRight className='size-3' />
-      <span className='text-foreground'>
+      <ChevronRight className='size-3 shrink-0' />
+      <span className='min-w-0 truncate text-foreground'>
         {current.emoji ? `${current.emoji} ` : ''}
         {current.title || untitledLabel}
       </span>
