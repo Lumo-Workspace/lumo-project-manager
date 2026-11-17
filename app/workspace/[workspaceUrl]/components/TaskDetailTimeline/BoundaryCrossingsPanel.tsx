@@ -91,6 +91,17 @@ export function crossingFieldsFor(c: {
   }
 }
 
+/** A copy of `record` without `key` — clears one crossing's draft state. */
+export function withoutKey<T>(
+  record: Record<string, T>,
+  key: string
+): Record<string, T> {
+  if (!(key in record)) return record
+  const rest = { ...record }
+  delete rest[key]
+  return rest
+}
+
 interface BoundaryCrossingsPanelProps {
   taskIdentifier: string
   enabled: boolean
@@ -169,36 +180,52 @@ export function BoundaryCrossingsPanel({
     Record<string, 'exact' | 'directory'>
   >({})
 
-  const loadSuppressPreview = (
+  // The latest preview request per crossing. Toggling the scope fires a new
+  // request while the old one may still be in flight; only the newest may
+  // write, or a slow 'exact' count could overwrite the 'directory' one.
+  const previewSeq = useRef<Record<string, number>>({})
+
+  const loadSuppressPreview = async (
     crossingId: string,
     scope: 'exact' | 'directory'
   ) => {
+    const seq = (previewSeq.current[crossingId] ?? 0) + 1
+    previewSeq.current[crossingId] = seq
+    const isLatest = () => previewSeq.current[crossingId] === seq
     setSuppressPreviews(prev => ({ ...prev, [crossingId]: 'loading' }))
-    void tasksClient
-      .previewCrossingSuppressionScope<SuppressionPreview>(
-        taskIdentifier,
-        crossingId,
-        // the exact scope keeps the plain two-argument call
-        ...(scope === 'directory' ? (['directory'] as const) : [])
-      )
-      .then(preview =>
-        setSuppressPreviews(prev => ({ ...prev, [crossingId]: preview }))
-      )
-      .catch(() =>
-        // Advisory only — a failed preview must never block the ruling itself,
-        // so the count line just stays absent.
-        setSuppressPreviews(prev =>
-          Object.fromEntries(
-            Object.entries(prev).filter(([key]) => key !== crossingId)
-          )
+    try {
+      const preview =
+        await tasksClient.previewCrossingSuppressionScope<SuppressionPreview>(
+          taskIdentifier,
+          crossingId,
+          // the exact scope keeps the plain two-argument call
+          ...(scope === 'directory' ? (['directory'] as const) : [])
         )
-      )
+      if (isLatest())
+        setSuppressPreviews(prev => ({ ...prev, [crossingId]: preview }))
+    } catch {
+      // Advisory only — a failed preview must never block the ruling itself,
+      // so the count line just stays absent.
+      if (isLatest()) setSuppressPreviews(prev => withoutKey(prev, crossingId))
+    }
+  }
+
+  // After a ruling lands, the row's draft inputs belong to the ruling just
+  // made: clear them, or the next correction would silently resend the old
+  // note and (on a later false positive) re-create the repository rule.
+  const clearDraft = (crossingId: string) => {
+    setNotes(prev => withoutKey(prev, crossingId))
+    setSuppress(prev => withoutKey(prev, crossingId))
+    setSuppressReasons(prev => withoutKey(prev, crossingId))
+    setSuppressScopes(prev => withoutKey(prev, crossingId))
+    setSuppressPreviews(prev => withoutKey(prev, crossingId))
+    delete previewSeq.current[crossingId]
   }
 
   const toggleSuppress = (crossingId: string, on: boolean) => {
     setSuppress(prev => ({ ...prev, [crossingId]: on }))
     if (!on || suppressPreviews[crossingId]) return
-    loadSuppressPreview(crossingId, suppressScopes[crossingId] ?? 'exact')
+    void loadSuppressPreview(crossingId, suppressScopes[crossingId] ?? 'exact')
   }
 
   const changeSuppressScope = (
@@ -207,7 +234,7 @@ export function BoundaryCrossingsPanel({
   ) => {
     setSuppressScopes(prev => ({ ...prev, [crossingId]: scope }))
     // The blast radius depends on the scope — refetch it for the new one.
-    loadSuppressPreview(crossingId, scope)
+    void loadSuppressPreview(crossingId, scope)
   }
 
   // LUM-496: an instance renders one slice of the task's crossings; 'all' keeps
@@ -356,6 +383,7 @@ export function BoundaryCrossingsPanel({
                       'Crossing dispositioned — Done is unblocked',
                   })
         )
+        clearDraft(crossingId)
         afterChange()
       })
       .catch(errorToast)
@@ -979,14 +1007,13 @@ function CrossingRow({
                     })}
                     :
                   </span>
-                  <code
-                    data-testid={`crossing-cmd-${c.id}`}
-                    onClick={() => setCmdOpen(o => !o)}
-                    className={`cursor-pointer rounded-md bg-muted/60 px-2 py-1 font-mono text-caption text-foreground ${cmdOpen ? 'whitespace-pre-wrap break-all' : 'truncate whitespace-nowrap'}`}
-                    title={cmdOpen ? undefined : fields.triggeredBy}
-                  >
-                    {fields.triggeredBy}
-                  </code>
+                  <CommandText
+                    testId={`crossing-cmd-${c.id}`}
+                    text={fields.triggeredBy}
+                    open={cmdOpen}
+                    onToggle={() => setCmdOpen(o => !o)}
+                    className='min-w-0'
+                  />
                 </div>
                 {fields.whatHappened && (
                   <div className='flex gap-1.5'>
@@ -1006,14 +1033,13 @@ function CrossingRow({
             )
           }
           return (
-            <code
-              data-testid={`crossing-cmd-${c.id}`}
-              onClick={() => setCmdOpen(o => !o)}
-              className={`mt-1.5 block cursor-pointer rounded-md bg-muted/60 px-2 py-1 font-mono text-caption text-foreground ${cmdOpen ? 'whitespace-pre-wrap break-all' : 'truncate whitespace-nowrap'}`}
-              title={cmdOpen ? undefined : c.detail}
-            >
-              {c.detail}
-            </code>
+            <CommandText
+              testId={`crossing-cmd-${c.id}`}
+              text={c.detail}
+              open={cmdOpen}
+              onToggle={() => setCmdOpen(o => !o)}
+              className='mt-1.5'
+            />
           )
         })()}
 
@@ -1093,7 +1119,7 @@ function CrossingRow({
                 defaultMessage: 'Agent self-report · unverified',
               })}
             </p>
-            <ul className='mt-1 space-y-1'>
+            <ul className='mt-1 max-h-60 space-y-1 overflow-y-auto'>
               {c.explanations.map(ex => (
                 <li
                   key={ex.id}
@@ -1138,7 +1164,7 @@ function CrossingRow({
                     defaultMessage: 'Explanation',
                   })}
                 </p>
-                <p className='whitespace-pre-wrap break-words text-caption text-foreground'>
+                <p className='max-h-60 overflow-y-auto whitespace-pre-wrap break-words text-caption text-foreground'>
                   {explainState.text}
                 </p>
               </div>
@@ -1843,6 +1869,58 @@ function PrFallback({
       })}
     </span>
   )
+}
+
+/**
+ * The command / detail that tripped a crossing. Collapsed it is one truncated
+ * line; expanded it wraps, capped in height so a multi-kilobyte heredoc
+ * scrolls in place instead of pushing the disposition buttons off screen.
+ * Toggles by click or Enter/Space — but not when the click ends a text
+ * selection, so the command can be copied while it is open. Rendered as a
+ * text node only: the content is untrusted agent input.
+ */
+function CommandText({
+  testId,
+  text,
+  open,
+  onToggle,
+  className = '',
+}: {
+  testId: string
+  text: string
+  open: boolean
+  onToggle: () => void
+  className?: string
+}) {
+  return (
+    <code
+      data-testid={testId}
+      role='button'
+      tabIndex={0}
+      aria-expanded={open}
+      onClick={() => {
+        if (hasTextSelection()) return
+        onToggle()
+      }}
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onToggle()
+        }
+      }}
+      className={`block cursor-pointer rounded-md bg-muted/60 px-2 py-1 font-mono text-caption text-foreground ${open ? 'max-h-60 overflow-y-auto whitespace-pre-wrap break-all' : 'truncate whitespace-nowrap'} ${className}`}
+      title={open ? undefined : text}
+    >
+      {text}
+    </code>
+  )
+}
+
+/** True when the user has text selected — a drag-to-select, not a click. */
+export function hasTextSelection(): boolean {
+  if (typeof window === 'undefined') return false
+  const selected = window.getSelection?.()?.toString() ?? ''
+  return selected.length > 0
 }
 
 function Snippet({

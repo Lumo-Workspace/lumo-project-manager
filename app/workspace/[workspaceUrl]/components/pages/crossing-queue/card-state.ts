@@ -1,4 +1,5 @@
 import type { CardContextView } from '@/lib/api-client/boundary-crossing-queue'
+import { htmlToPlainText } from '@/lib/html/html-to-plain-text'
 
 /**
  * LUM-1336: the sections of a card's context. Every one must load before a
@@ -32,13 +33,17 @@ export function canRule(ctx: CardContextView | null): boolean {
   )
 }
 
-/** The first `lines` non-empty lines of a description, for the card face. */
+/**
+ * The first `lines` non-empty lines of a description, for the card face.
+ * Descriptions are stored as rich HTML, so tags are stripped first — the face
+ * shows the text a member wrote, never `<p>` markup.
+ */
 export function purposeExcerpt(
   description: string | null,
   lines = 3
 ): string | null {
   if (!description) return null
-  const kept = description
+  const kept = htmlToPlainText(description)
     .split('\n')
     .map(l => l.trim())
     .filter(Boolean)

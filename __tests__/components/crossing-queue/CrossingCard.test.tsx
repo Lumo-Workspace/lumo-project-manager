@@ -150,6 +150,36 @@ it('shows the task, its purpose and the turn intent on the face', () => {
   ).toBeTruthy()
 })
 
+it('renders a rich-HTML task spec as formatted text, never raw markup', () => {
+  renderCard(
+    context({
+      task: {
+        status: 'ok',
+        data: {
+          identifier: 'LUM-12',
+          title: 'Add padding',
+          description:
+            '<p>Pad <strong>table</strong> cells.</p><img src=x onerror="window.__pwned=1">',
+          status: 'IN_PROGRESS',
+          projectName: 'Lumo',
+          milestoneName: null,
+          sprintName: null,
+          assigneeMemberId: null,
+        },
+      },
+    })
+  )
+  // The face shows the description's text, with no tags.
+  expect(screen.getByText('Pad table cells.')).toBeTruthy()
+  expect(screen.queryByText(/<p>/)).toBeNull()
+  fireEvent.click(screen.getByText('Task spec'))
+  const spec = screen.getByTestId('crossing-card-spec')
+  expect(spec.querySelector('strong')?.textContent).toBe('table')
+  // Sanitized: the event handler is stripped before it reaches the DOM.
+  expect(spec.innerHTML).not.toMatch(/onerror/)
+  expect(spec.className).toMatch(/overflow-y-auto/)
+})
+
 it('rules with one click, sending the state hash the card was read at', () => {
   renderCard(context())
   fireEvent.click(screen.getByTestId('crossing-card-false-positive'))
