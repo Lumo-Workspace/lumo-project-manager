@@ -4,7 +4,7 @@
  *
  * Three predicates historically each hand-maintained their own near-identical
  * but subtly divergent tag list:
- *   - `isHtml`                (html-to-markdown.ts) — permissive containment
+ *   - `isHtml`                (this file)           — permissive containment
  *   - `looksLikeHtmlDocument` (markdown.ts)         — strict, prefix-anchored
  *   - backfill `NESTED_BLOCK` (scripts/…)           — "inner has a nested block"
  *
@@ -40,4 +40,27 @@ export const BLOCK_TAGS = [
  */
 export function tagGroup(...tags: readonly string[]): string {
   return tags.join('|')
+}
+
+/**
+ * The permissive containment check: matches the shared block-level core
+ * plus inline tags, list items, and images — i.e. *any* rich-text tag
+ * appearing *anywhere* in the string. `a`/`img` carry a word boundary so
+ * `<article>` / `<image>` don't false-match, and the group is followed by
+ * `[>\s/]` to require a tag terminator (so `<pre-release` isn't HTML).
+ *
+ * Deliberately broader than `looksLikeHtmlDocument`; the divergence is
+ * load-bearing — see `normalizeRichText`.
+ */
+const HTML_CONTAINS = new RegExp(
+  `<(?:${tagGroup(...BLOCK_TAGS, 'span', 'br', 'li', 'a\\b', 'strong', 'em', 'code', 'img\\b')})[>\\s/]`,
+  'i'
+)
+
+/**
+ * Detect whether a string is likely HTML (as opposed to plain markdown).
+ * Looks for common HTML tags that would appear in rich-text content.
+ */
+export function isHtml(text: string): boolean {
+  return HTML_CONTAINS.test(text)
 }

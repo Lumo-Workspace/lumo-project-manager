@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useIntl } from 'react-intl'
 import { useParams } from 'next/navigation'
 import { ShieldCheck } from 'lucide-react'
@@ -67,192 +67,210 @@ export function CrossingQueuePage({
   const current = ordered[0] ?? null
   const card = useCrossingCard(current?.id ?? null)
 
-  return (
-    <div className='mx-auto w-full max-w-3xl px-4 py-6 sm:px-6'>
-      <header className='mb-4'>
-        <h1 className='text-heading'>
-          {intl.formatMessage({
-            id: 'crossingQueue.title',
-            defaultMessage: 'Boundary Crossings',
-          })}
-        </h1>
-        <p className='mt-1 text-body text-muted-foreground'>
-          {intl.formatMessage({
-            id: 'crossingQueue.subtitle',
-            defaultMessage:
-              'Crossings waiting on your ruling, one card at a time. Rule on it, tag a teammate, or shuffle it to the back.',
-          })}
-        </p>
-      </header>
+  // A ruling or shuffle is made from the action bar at the bottom of a card;
+  // the next card dealt must start at its top, not at the old scroll offset.
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const currentId = current?.id ?? null
+  useEffect(() => {
+    if (currentId) scrollRef.current?.scrollTo?.({ top: 0 })
+  }, [currentId])
 
-      <div className='mb-4 flex flex-wrap items-center gap-2'>
-        <ToggleGroup
-          type='single'
-          variant='chip'
-          value={filter}
-          onValueChange={v => v && setFilter(v as QueueFilter)}
-          aria-label={intl.formatMessage({
-            id: 'crossingQueue.filter',
-            defaultMessage: 'Filter',
-          })}
-        >
-          <ToggleGroupItem value='all'>
+  return (
+    // The workspace shell clips its page area (overflow-hidden), so the page
+    // owns its scroll — a card with its sections open is taller than the view.
+    <div
+      ref={scrollRef}
+      data-testid='crossing-queue-scroll'
+      className='min-h-0 flex-1 overflow-y-auto'
+    >
+      <div className='mx-auto w-full max-w-3xl px-4 py-6 sm:px-6'>
+        <header className='mb-4'>
+          <h1 className='text-heading'>
             {intl.formatMessage({
-              id: 'crossingQueue.filter.all',
-              defaultMessage: 'All',
+              id: 'crossingQueue.title',
+              defaultMessage: 'Boundary Crossings',
             })}
-          </ToggleGroupItem>
-          <ToggleGroupItem value='tagged'>
+          </h1>
+          <p className='mt-1 text-body text-muted-foreground'>
             {intl.formatMessage({
-              id: 'crossingQueue.filter.tagged',
-              defaultMessage: 'Tagged for me',
+              id: 'crossingQueue.subtitle',
+              defaultMessage:
+                'Crossings waiting on your ruling, one card at a time. Rule on it, tag a teammate, or shuffle it to the back.',
             })}
-          </ToggleGroupItem>
-          <ToggleGroupItem value='blocking'>
-            {intl.formatMessage({
-              id: 'crossingQueue.filter.blocking',
-              defaultMessage: 'Blocking only',
-            })}
-          </ToggleGroupItem>
-        </ToggleGroup>
-        <Select
-          value={projectId ?? ALL_PROJECTS}
-          onValueChange={v => setProjectId(v === ALL_PROJECTS ? null : v)}
-        >
-          <SelectTrigger
-            className='h-control-sm w-48'
+          </p>
+        </header>
+
+        <div className='mb-4 flex flex-wrap items-center gap-2'>
+          <ToggleGroup
+            type='single'
+            variant='chip'
+            value={filter}
+            onValueChange={v => v && setFilter(v as QueueFilter)}
             aria-label={intl.formatMessage({
-              id: 'crossingQueue.project',
-              defaultMessage: 'Project',
+              id: 'crossingQueue.filter',
+              defaultMessage: 'Filter',
             })}
           >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL_PROJECTS}>
+            <ToggleGroupItem value='all'>
               {intl.formatMessage({
-                id: 'crossingQueue.allProjects',
-                defaultMessage: 'All projects',
+                id: 'crossingQueue.filter.all',
+                defaultMessage: 'All',
               })}
-            </SelectItem>
-            {projects.map(p => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {queue && ordered.length > 0 && (
-          <span
-            className='ml-auto text-caption text-muted-foreground'
-            role='status'
+            </ToggleGroupItem>
+            <ToggleGroupItem value='tagged'>
+              {intl.formatMessage({
+                id: 'crossingQueue.filter.tagged',
+                defaultMessage: 'Tagged for me',
+              })}
+            </ToggleGroupItem>
+            <ToggleGroupItem value='blocking'>
+              {intl.formatMessage({
+                id: 'crossingQueue.filter.blocking',
+                defaultMessage: 'Blocking only',
+              })}
+            </ToggleGroupItem>
+          </ToggleGroup>
+          <Select
+            value={projectId ?? ALL_PROJECTS}
+            onValueChange={v => setProjectId(v === ALL_PROJECTS ? null : v)}
           >
-            {intl.formatMessage(
-              {
-                id: 'crossingQueue.counter',
-                defaultMessage:
-                  '{count, plural, one {# card} other {# cards}} · {blocking} blocking Done',
-              },
-              { count: ordered.length, blocking: blockingShown }
+            <SelectTrigger
+              className='h-control-sm w-48'
+              aria-label={intl.formatMessage({
+                id: 'crossingQueue.project',
+                defaultMessage: 'Project',
+              })}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_PROJECTS}>
+                {intl.formatMessage({
+                  id: 'crossingQueue.allProjects',
+                  defaultMessage: 'All projects',
+                })}
+              </SelectItem>
+              {projects.map(p => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {queue && ordered.length > 0 && (
+            <span
+              className='ml-auto text-caption text-muted-foreground'
+              role='status'
+            >
+              {intl.formatMessage(
+                {
+                  id: 'crossingQueue.counter',
+                  defaultMessage:
+                    '{count, plural, one {# card} other {# cards}} · {blocking} blocking Done',
+                },
+                { count: ordered.length, blocking: blockingShown }
+              )}
+            </span>
+          )}
+        </div>
+
+        {queue?.truncated && (
+          <p className='mb-3 text-caption text-muted-foreground'>
+            {intl.formatMessage({
+              id: 'crossingQueue.truncated',
+              defaultMessage:
+                'Showing the first 500 open crossings — rule on some to see the rest.',
+            })}
+          </p>
+        )}
+
+        {loading ? (
+          <div className='h-64 animate-pulse rounded-lg border border-border bg-muted/40' />
+        ) : error && !queue ? (
+          // Only a failed FIRST load replaces the deck: a failed background
+          // refetch keeps showing the card already dealt.
+          <div className='flex flex-wrap items-center gap-2 text-body text-danger-text'>
+            <span>
+              {intl.formatMessage({
+                id: 'crossingQueue.loadFailed',
+                defaultMessage: "Couldn't load your queue.",
+              })}
+            </span>
+            <Button
+              type='button'
+              variant='outline'
+              size='sm'
+              onClick={() => refresh()}
+            >
+              {intl.formatMessage({
+                id: 'crossingQueue.retry',
+                defaultMessage: 'Retry',
+              })}
+            </Button>
+          </div>
+        ) : current ? (
+          <div className='relative pb-3'>
+            {/* The rest of the deck peeking out behind the top card. */}
+            {ordered.length > 2 && (
+              <div
+                aria-hidden
+                className='absolute inset-x-6 bottom-0 top-3 rounded-lg border border-border bg-card/60'
+              />
             )}
-          </span>
+            {ordered.length > 1 && (
+              <div
+                aria-hidden
+                className='absolute inset-x-3 bottom-1.5 top-1.5 rounded-lg border border-border bg-card/80'
+              />
+            )}
+            <div className='relative'>
+              <CrossingCard
+                key={current.id}
+                card={current}
+                context={card.context}
+                members={members}
+                taskHref={`/workspace/${workspaceUrl}/my-tasks/${current.taskIdentifier}/record#${BOUNDARY_CROSSINGS_ANCHOR}`}
+                onRetry={() => card.refresh()}
+                actions={
+                  <CardActions
+                    key={current.id}
+                    crossingId={current.id}
+                    context={card.context}
+                    members={members}
+                    onShuffle={() => shuffle(current.id)}
+                  />
+                }
+              />
+            </div>
+          </div>
+        ) : (
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant='icon'>
+                <ShieldCheck />
+              </EmptyMedia>
+              <EmptyTitle>
+                {filter === 'tagged'
+                  ? intl.formatMessage({
+                      id: 'crossingQueue.empty.tagged',
+                      defaultMessage: 'Nothing tagged for you',
+                    })
+                  : intl.formatMessage({
+                      id: 'crossingQueue.empty.title',
+                      defaultMessage: 'Nothing to rule on',
+                    })}
+              </EmptyTitle>
+              <EmptyDescription>
+                {intl.formatMessage({
+                  id: 'crossingQueue.empty.description',
+                  defaultMessage:
+                    "Crossings on tasks assigned to you show up here. Workspace owners see every task's crossings.",
+                })}
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         )}
       </div>
-
-      {queue?.truncated && (
-        <p className='mb-3 text-caption text-muted-foreground'>
-          {intl.formatMessage({
-            id: 'crossingQueue.truncated',
-            defaultMessage:
-              'Showing the first 500 open crossings — rule on some to see the rest.',
-          })}
-        </p>
-      )}
-
-      {loading ? (
-        <div className='h-64 animate-pulse rounded-lg border border-border bg-muted/40' />
-      ) : error ? (
-        <div className='flex flex-wrap items-center gap-2 text-body text-danger-text'>
-          <span>
-            {intl.formatMessage({
-              id: 'crossingQueue.loadFailed',
-              defaultMessage: "Couldn't load your queue.",
-            })}
-          </span>
-          <Button
-            type='button'
-            variant='outline'
-            size='sm'
-            onClick={() => refresh()}
-          >
-            {intl.formatMessage({
-              id: 'crossingQueue.retry',
-              defaultMessage: 'Retry',
-            })}
-          </Button>
-        </div>
-      ) : current ? (
-        <div className='relative pb-3'>
-          {/* The rest of the deck peeking out behind the top card. */}
-          {ordered.length > 2 && (
-            <div
-              aria-hidden
-              className='absolute inset-x-6 bottom-0 top-3 rounded-lg border border-border bg-card/60'
-            />
-          )}
-          {ordered.length > 1 && (
-            <div
-              aria-hidden
-              className='absolute inset-x-3 bottom-1.5 top-1.5 rounded-lg border border-border bg-card/80'
-            />
-          )}
-          <div className='relative'>
-            <CrossingCard
-              key={current.id}
-              card={current}
-              context={card.context}
-              members={members}
-              taskHref={`/workspace/${workspaceUrl}/my-tasks/${current.taskIdentifier}/record#${BOUNDARY_CROSSINGS_ANCHOR}`}
-              onRetry={() => card.refresh()}
-              actions={
-                <CardActions
-                  key={current.id}
-                  crossingId={current.id}
-                  context={card.context}
-                  members={members}
-                  onShuffle={() => shuffle(current.id)}
-                />
-              }
-            />
-          </div>
-        </div>
-      ) : (
-        <Empty>
-          <EmptyHeader>
-            <EmptyMedia variant='icon'>
-              <ShieldCheck />
-            </EmptyMedia>
-            <EmptyTitle>
-              {filter === 'tagged'
-                ? intl.formatMessage({
-                    id: 'crossingQueue.empty.tagged',
-                    defaultMessage: 'Nothing tagged for you',
-                  })
-                : intl.formatMessage({
-                    id: 'crossingQueue.empty.title',
-                    defaultMessage: 'Nothing to rule on',
-                  })}
-            </EmptyTitle>
-            <EmptyDescription>
-              {intl.formatMessage({
-                id: 'crossingQueue.empty.description',
-                defaultMessage:
-                  "Crossings on tasks assigned to you show up here. Workspace owners see every task's crossings.",
-              })}
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      )}
     </div>
   )
 }

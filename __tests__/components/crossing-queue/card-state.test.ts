@@ -54,6 +54,24 @@ describe('LUM-1336 purposeExcerpt', () => {
     )
   })
 
+  it('reads the text of a stored rich-HTML description, not its tags', () => {
+    expect(
+      purposeExcerpt(
+        '<h2>Goal</h2><p>Pad table cells &amp; rows.</p><p></p><ul><li>Small dep</li><li>Tests</li></ul>'
+      )
+    ).toBe('Goal\nPad table cells & rows.\n- Small dep')
+  })
+
+  it('is null for an empty editor paragraph', () => {
+    expect(purposeExcerpt('<p></p>')).toBeNull()
+  })
+
+  it('keeps generics and comparisons in a plain-text description', () => {
+    expect(purposeExcerpt('Return Array<string>\nif a < b > c')).toBe(
+      'Return Array<string>\nif a < b > c'
+    )
+  })
+
   it('is null for a missing or blank description', () => {
     expect(purposeExcerpt(null)).toBeNull()
     expect(purposeExcerpt(' \n ')).toBeNull()

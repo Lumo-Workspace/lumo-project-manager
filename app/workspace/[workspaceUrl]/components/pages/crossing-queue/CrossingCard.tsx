@@ -18,6 +18,7 @@ import {
   AttributionLine,
   EditChangeBlock,
 } from '../../TaskDetailTimeline/BoundaryCrossingsPanel'
+import { DescriptionReadOnly } from '../../DescriptionReadOnly'
 import { ContextSection } from './ContextSection'
 import { purposeExcerpt } from './card-state'
 
@@ -72,8 +73,15 @@ export function CrossingCard({
         <span className='font-mono text-caption text-muted-foreground'>
           {card.ref}
         </span>
+        {/* Same tones as the task page's crossing panel: LOW reads muted. */}
         <Badge
-          variant={card.severity === 'HIGH' ? 'danger' : 'warning'}
+          variant={
+            card.severity === 'HIGH'
+              ? 'danger'
+              : card.severity === 'LOW'
+                ? 'muted'
+                : 'warning'
+          }
           size='sm'
           shape='square'
         >
@@ -217,13 +225,22 @@ export function CrossingCard({
         >
           {t => (
             <div className='space-y-3'>
-              <p className='whitespace-pre-wrap break-words'>
-                {t.description ??
-                  intl.formatMessage({
+              {/* Descriptions are stored rich HTML — rendered through the
+                  sanitizing RichHtml path like the task page, never as raw
+                  markup. A long spec scrolls inside its own box. */}
+              <div
+                data-testid='crossing-card-spec'
+                className='max-h-96 overflow-y-auto rounded-md border border-border/60 px-3 py-2'
+              >
+                <DescriptionReadOnly
+                  html={t.description}
+                  className='min-h-0'
+                  placeholder={intl.formatMessage({
                     id: 'crossingQueue.noDescription',
                     defaultMessage: 'The task has no description.',
                   })}
-              </p>
+                />
+              </div>
               <ContextSection
                 title={intl.formatMessage({
                   id: 'crossingQueue.section.testCases',
@@ -467,7 +484,7 @@ export function CrossingCard({
                   })}
                 </Muted>
               ) : (
-                <ul className='space-y-1'>
+                <ul className='max-h-60 space-y-1 overflow-y-auto'>
                   {v.explanations.map(e => (
                     <li key={e.id} className='whitespace-pre-wrap break-words'>
                       {e.note}
@@ -653,8 +670,10 @@ function LabeledText({
       <p className='text-caption font-semibold text-muted-foreground'>
         {label}
       </p>
+      {/* A multi-kilobyte heredoc or explanation scrolls in place instead of
+          stretching the card past the action bar. */}
       <p
-        className={`whitespace-pre-wrap break-words ${mono ? 'font-mono text-caption' : ''}`}
+        className={`max-h-60 overflow-y-auto whitespace-pre-wrap break-words ${mono ? 'font-mono text-caption' : ''}`}
       >
         {text}
       </p>
