@@ -66,6 +66,12 @@ describe('LUM-1336 purposeExcerpt', () => {
     expect(purposeExcerpt('<p></p>')).toBeNull()
   })
 
+  it('keeps generics and comparisons in a plain-text description', () => {
+    expect(purposeExcerpt('Return Array<string>\nif a < b > c')).toBe(
+      'Return Array<string>\nif a < b > c'
+    )
+  })
+
   it('is null for a missing or blank description', () => {
     expect(purposeExcerpt(null)).toBeNull()
     expect(purposeExcerpt(' \n ')).toBeNull()

@@ -36,4 +36,22 @@ describe('LUM-1336 htmlToPlainText', () => {
   it('passes plain text through unchanged', () => {
     expect(htmlToPlainText('One\nTwo')).toBe('One\nTwo')
   })
+
+  it('keeps literal angle brackets in plain-text descriptions', () => {
+    expect(
+      htmlToPlainText('Return Array<string>\nwhen a < b > c\nsee <issue-42>')
+    ).toBe('Return Array<string>\nwhen a < b > c\nsee <issue-42>')
+  })
+
+  it('does not decode entities in plain text', () => {
+    expect(htmlToPlainText('AT&amp;T stays literal')).toBe(
+      'AT&amp;T stays literal'
+    )
+  })
+
+  it('still strips tags once a real rich-text tag is present', () => {
+    expect(htmlToPlainText('<p>Use <code>Map</code> here</p>')).toBe(
+      'Use Map here'
+    )
+  })
 })

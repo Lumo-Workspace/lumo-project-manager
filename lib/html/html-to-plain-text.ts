@@ -8,6 +8,8 @@
  * parsed back into HTML, so a tag strip is safe here.
  */
 
+import { isHtml } from '@/lib/utils/html-tags'
+
 const NAMED_ENTITIES: Record<string, string> = {
   amp: '&',
   lt: '<',
@@ -35,6 +37,10 @@ function decodeEntity(match: string, body: string): string {
 }
 
 export function htmlToPlainText(html: string): string {
+  // Older or API-written descriptions can be plain text, where `Array<string>`
+  // or `a < b > c` is content, not markup. Only strip once the string carries
+  // a real rich-text tag — the same test the markdown/HTML paths use.
+  if (!isHtml(html)) return html.trim()
   return (
     html
       .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, '')
