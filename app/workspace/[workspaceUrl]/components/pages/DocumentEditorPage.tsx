@@ -1,6 +1,12 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import {
+  useEffect,
+  useLayoutEffect,
+  useState,
+  useCallback,
+  useRef,
+} from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useIntl } from 'react-intl'
 import { Link2, History, MessageSquare } from 'lucide-react'
@@ -35,6 +41,8 @@ import { documentsClient } from '@/lib/api-client'
 import { readCache, writeCache } from '../../cache'
 import { useTags } from '../../hooks/useTags'
 import { useDocTocCollapsed } from '../../hooks/useDocTocCollapsed'
+import { useElementWidth } from '../../hooks/useElementWidth'
+import { computeEditorRails } from '@/lib/editor/editor-rails'
 import { useDocumentSave } from '../../hooks/useDocumentSave'
 import { isTempDocumentId, isTempToRealSwap } from '../../utils/tempDocId'
 import { useDocumentComments } from '../../hooks/useDocumentComments'
@@ -148,6 +156,36 @@ export function DocumentEditorPage({
   const [activeCommentId, setActiveCommentId] = useState<string | null>(null)
   // Narrow-screen (<xl) comments drawer — the gutter rail is hidden there.
   const [commentSheetOpen, setCommentSheetOpen] = useState(false)
+
+  // Side rails are sized against the editor pane, not the viewport: with the
+  // workspace sidebar and doc tree open the pane is far narrower than the
+  // window, and viewport breakpoints let the rails squeeze the body.
+  const paneWidth = useElementWidth(scrollRoot)
+  // Set when the reader opens the outline while it is collapsed for lack of
+  // room: the outline then wins the space and comments move to the drawer.
+  const [preferToc, setPreferToc] = useState(false)
+  const rails = computeEditorRails({
+    paneWidth,
+    hasToc: tocItems.length > 0,
+    hasComments: comments.length > 0,
+    tocCollapsed,
+    preferToc,
+  })
+  const handleToggleToc = () => {
+    if (rails.tocForced) setPreferToc(true)
+    else if (preferToc) setPreferToc(false)
+    else toggleToc()
+  }
+
+  // The title wraps instead of truncating: grow the textarea to its content
+  // whenever the text or the available width changes.
+  const titleRef = useRef<HTMLTextAreaElement | null>(null)
+  useLayoutEffect(() => {
+    const el = titleRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [title, paneWidth, rails.toc, rails.gutter, doc?.id])
 
   const queryClient = useQueryClient()
 
@@ -462,8 +500,8 @@ export function DocumentEditorPage({
             so the breadcrumb sits flush against the left edge. `px-2` mirrors
             the 8px gutter the doc tree (or the collapsed-rail) reserves on
             its right edge, so all document pages share a consistent gutter. */}
-        <div className='flex items-center justify-between px-2 pt-6 pb-4'>
-          <div className='min-w-0'>
+        <div className='flex items-center justify-between gap-4 px-2 pt-6 pb-4'>
+          <div className='min-w-0 flex-1'>
             <DocumentBreadcrumb
               ancestors={ancestors}
               current={{
@@ -477,10 +515,11 @@ export function DocumentEditorPage({
               }}
             />
           </div>
-          <div className='flex items-center gap-2'>
-            <button
-              type='button'
-              className='h-8 rounded-md px-2 text-body text-muted-foreground hover:text-foreground'
+          <div className='flex shrink-0 items-center gap-1'>
+            <Button
+              size='sm'
+              variant='ghost'
+              className='h-8'
               onClick={async () => {
                 const label = window.prompt(
                   intl.formatMessage({
@@ -516,14 +555,14 @@ export function DocumentEditorPage({
                 id: 'documentHistory.saveAsVersion',
                 defaultMessage: 'Save as version',
               })}
-            </button>
-            {/* Comments drawer trigger — narrow screens only; the xl gutter
-                rail is hidden below xl, so this is the way to reach threads. */}
-            {comments.length > 0 && (
+            </Button>
+            {/* Comments drawer trigger — shown whenever the gutter rail has no
+                room, so threads stay reachable. */}
+            {comments.length > 0 && !rails.gutter && (
               <Button
                 size='sm'
                 variant='ghost'
-                className='gap-1.5 h-8 xl:hidden'
+                className='gap-1.5 h-8'
                 onClick={() => setCommentSheetOpen(true)}
               >
                 <MessageSquare size={14} />
@@ -571,18 +610,18 @@ export function DocumentEditorPage({
             space, so the document body barely moves. */}
         <div className='flex w-full'>
           {/* Left rail — outline (TOC), collapsible. */}
-          {tocItems.length > 0 && (
+          {rails.toc !== 'hidden' && (
             <aside
               ref={tocScrollRef}
               className={cn(
-                'toc-scroll hidden xl:block shrink-0 self-start sticky top-0 max-h-screen overflow-y-auto pt-2 px-2',
-                tocCollapsed ? 'w-12' : 'w-60'
+                'toc-scroll shrink-0 self-start sticky top-0 max-h-screen overflow-y-auto pt-2 px-2',
+                rails.toc === 'collapsed' ? 'w-12' : 'w-60'
               )}
             >
               <DocumentToc
                 items={withTitleRoot(tocItems, title)}
-                collapsed={tocCollapsed}
-                onToggle={toggleToc}
+                collapsed={rails.toc === 'collapsed'}
+                onToggle={handleToggleToc}
                 scrollRoot={scrollRoot}
               />
             </aside>
@@ -596,11 +635,23 @@ export function DocumentEditorPage({
                 {/* Emoji + Title */}
                 <div className='flex items-start gap-3 mb-4'>
                   <EmojiPicker value={doc.emoji} onChange={handleEmojiChange} />
-                  <input
-                    type='text'
+                  <textarea
+                    ref={titleRef}
+                    rows={1}
                     value={title}
-                    onChange={e => handleTitleChange(e.target.value)}
-                    className='flex-1 text-display bg-transparent border-none outline-none placeholder:text-muted-foreground'
+                    onChange={e =>
+                      handleTitleChange(
+                        e.target.value.replace(/\s*\n\s*/g, ' ')
+                      )
+                    }
+                    onKeyDown={e => {
+                      // A title is one line of text: Enter moves into the body.
+                      if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                        e.preventDefault()
+                        editorRef.current?.commands.focus('start')
+                      }
+                    }}
+                    className='min-w-0 flex-1 resize-none overflow-hidden text-display bg-transparent border-none outline-none placeholder:text-muted-foreground'
                     placeholder={intl.formatMessage({
                       id: 'documents.untitled',
                     })}
@@ -701,8 +752,8 @@ export function DocumentEditorPage({
             </div>
 
             {/* Right rail — comments gutter (Google-Docs style). */}
-            {comments.length > 0 && (
-              <aside className='hidden xl:block shrink-0 self-start w-64 pt-2 px-1'>
+            {rails.gutter && (
+              <aside className='shrink-0 self-start w-64 pt-2 px-1'>
                 <CommentGutter
                   editor={editor}
                   rowEl={commentRow}
@@ -738,7 +789,7 @@ export function DocumentEditorPage({
           />
         )}
 
-        {/* Narrow-screen comments drawer (gutter rail is hidden below xl). */}
+        {/* Comments drawer, for when the gutter rail has no room. */}
         <CommentSheet
           open={commentSheetOpen}
           onOpenChange={setCommentSheetOpen}
