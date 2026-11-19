@@ -4423,6 +4423,42 @@
       "description": "Show the synced PR record (diff/review comments when available)",
       "codex": { "serverOnly": true, "localFiles": "none" }
     },
+    "task run": {
+      "arguments": [],
+      "flags": {},
+      "hasSubcommands": true,
+      "isInvokable": false,
+      "description": "A task's raw agent session records (summaries: `lumo task show --runs`)"
+    },
+    "task run download": {
+      "arguments": [{ "name": "task", "required": false, "variadic": false }],
+      "flags": {
+        "--force": {
+          "long": "--force",
+          "short": null,
+          "value": "none",
+          "enum": null,
+          "enumCaseInsensitive": false,
+          "description": "Overwrite <file> when it already exists"
+        },
+        "--output": {
+          "long": "--output",
+          "short": "-o",
+          "value": "required",
+          "enum": null,
+          "enumCaseInsensitive": false,
+          "description": "File to write (JSONL). Raw records are never printed to stdout"
+        }
+      },
+      "hasSubcommands": false,
+      "isInvokable": true,
+      "description": "Save a task's raw agent session records to a file as JSONL: one line per hook event with its payload as stored. Prints one result line, never a payload. Defaults to the bound task.",
+      "codex": {
+        "serverOnly": false,
+        "localFiles": "writes",
+        "detail": "writes local files (saves the raw session records into the -o file) — Codex asks first"
+      }
+    },
     "task show": {
       "arguments": [{ "name": "task", "required": false, "variadic": false }],
       "flags": {
