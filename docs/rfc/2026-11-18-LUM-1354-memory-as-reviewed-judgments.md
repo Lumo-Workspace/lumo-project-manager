@@ -1,6 +1,6 @@
 # 把 Lumo 记忆改成经人审核的 judgment
 
-日期:2026-11-18 · 任务:LUM-1354 · 状态:所有者已裁定(LUM-1354 Decision 2–10,2026-11-19);剩 1 个问题待定(第 3 节)
+日期:2026-11-18 · 任务:LUM-1354 · 状态:所有者已裁定(LUM-1354 Decision 2–11,2026-11-19)
 
 现状断言核实于 `origin/main` @ `2614582ac`(PR 1743 合并之后)。proofpress 的断言核实于
 `continuara-lab/proofpress-judgment` @ `2623c8f`(Apache-2.0)和本机 CLI 输出的 schema。
@@ -44,7 +44,6 @@ judgment,流程跟随它,并做成团队层。他没有说明理由,本文不替
 - 不做「绑定到工具调用的拦截」。proofpress 自己的设计讨论把它列为未实现的后续方向,并且要求走
   完整登记的动作索引而不是检索。Lumo 的越界检测器、策略规则、安全扫描本 RFC 不动。
   唯一的接触点保持现状:写入时用项目策略规则做冲突检查(`lib/services/memory/write-gate.ts`)。
-- 任务级工作笔记是否保留还没有裁定(第 3 节的待定问题)。
 
 **做到了也算失败**
 
@@ -54,8 +53,8 @@ judgment,流程跟随它,并做成团队层。他没有说明理由,本文不替
 
 ## 3. 所有者的裁定
 
-所有者 2026-11-19 裁定:8 个问题都按推荐,另加两条跟随 proofpress 的规定。原话是「8 个问题都按推荐来」
-和「只有批准过的修订会被取用，断言冲突会同时暂停准入和复用,直到解决」。后一句取代了问题 5 原先的推荐
+所有者 2026-11-19 的裁定共十条。原先列出的 8 个问题按推荐(「8 个问题都按推荐来」);随后两句话改了其中
+一条并新增两条:「只有批准过的修订会被取用，断言冲突会同时暂停准入和复用,直到解决」和「停止注入」。第二句取代了问题 5 原先的推荐
 (遗留记忆标「未审核」继续投递)和第 5 节原先的冲突处理(已生效的继续投递)。
 
 | #   | 问题              | 裁定                                                                                                                      | 记录        |
@@ -69,17 +68,12 @@ judgment,流程跟随它,并做成团队层。他没有说明理由,本文不替
 | 7   | 对客名称          | 产品里仍叫团队记忆(Team memory),条目状态显示「待审 / 已批准 / 已撤回」;内部模型叫 Judgment                                | Decision 8  |
 | 8   | 上线范围          | 先只在 Lumo 自己的工作区打开,量出第 8 节的指标后再决定是否对客户默认开启                                                  | Decision 9  |
 | 9   | 断言冲突          | 同时暂停准入和复用,直到解决                                                                                               | Decision 10 |
+| 10  | 任务级工作笔记    | 停止注入;Layer1 的记忆抽取下线                                                                                            | Decision 11 |
 
-没有被选中的备选:问题 1 的「检索也完全跟随,停掉同步」;问题 2 的「仅 OWNER」「必须是提出者以外的人」
-「允许 CLI 确认握手」;问题 3 的「整体下线」「Layer1 也产生候选」;问题 4 的「保留四个分类」;问题 6 的
-「允许勾选理由未知仍批准」;问题 7 的「对客也改叫 judgment」;问题 8 的「一次对所有工作区开启」。
-
-**还待定的一个问题:任务级工作笔记。** Layer1 每个回合写的任务级笔记(`MemoryScope.TASK`)没有人审核,
-只注入同一任务的后续会话,从不同步给别人。问题 3 的推荐保留它;「只有批准过的修订会被取用」按字面又
-排除它。两条裁定在这里冲突,需要所有者再定一次:
-
-- (a) 保留:它是同一任务内的续接材料,不算团队判断,不出任务。本文其余部分按这个写。
-- (b) 停止注入:Layer1 整条管线下线,任务内的续接只靠会话摘要。
+没有被选中的做法:问题 1 的「检索也完全跟随,停掉同步」;问题 2 的「仅 OWNER 能批准」「必须由提出者以外的人
+批准」「允许在 CLI 上走确认握手来批准」;问题 3 的「整体下线,只留显式提交」;问题 4 的「保留四个分类,
+kind 只作附加标签」;问题 6 的「允许勾选理由未知仍批准」;问题 7 的「对客也改叫 judgment」;问题 8 的
+「一次对所有工作区开启」;问题 10 的「保留任务级笔记,只在同一任务内注入」。
 
 ### 问题 1 的依据
 
@@ -106,9 +100,9 @@ proofpress 这边,`docs/MATCHING-DISCUSSION.md` 把「发现候选」和「判�
   (`app/api/tasks/[id]/boundary-crossings/disposition/route.ts:28`;记忆的退役和合并路由也是这样,
   `app/api/memories/[memoryId]/retire/route.ts:25`、`app/api/projects/[id]/memories/merge/route.ts:33`)。
   这是内联判断,没有共用的 helper;实现时抽一个。字段名里的 clerk 是历史命名,指浏览器会话。
-- 备选 (d) 也有先例:安全发现的处置允许 CLI key,靠确认协议加 `channel: 'CLI' | 'WEB'` 留痕
+- 「允许在 CLI 上走确认握手来批准」也有先例:安全发现的处置允许 CLI key,靠确认协议加 `channel: 'CLI' | 'WEB'` 留痕
   (`app/api/tasks/[id]/security-findings/[findingId]/disposition/route.ts:50`)。
-- 不推荐 (c) 作为默认:单人工作区会永远批不了自己提的东西。
+- 没有选「必须由提出者以外的人批准」:单人工作区会永远批不了自己提的东西。
 
 需要说明的边界:这道检查挡的是 CLI key,挡不住能操作用户浏览器的 agent。proofpress 的 `SECURITY.md`
 对自己也是同样的表述(所有者身份是自己声明的,不能当对抗性的审批边界)。本 RFC 不声称更强的保证。
@@ -117,7 +111,7 @@ proofpress 这边,`docs/MATCHING-DISCUSSION.md` 把「发现候选」和「判�
 
 新建三张表,不改 `memories` 表。理由:批准必须绑定一个不可变的确切修订,而现有修订链是「每个版本一行、
 换 id」(`supersededById`),id 一变,同步文件名和 judged-used 履历都断了;新表也让第一阶段没有任何
-破坏性迁移,回滚只需关开关。
+破坏性迁移,回滚只需把设置调回去。
 
 **`judgments`:一条 judgment 的稳定身份**
 
@@ -220,7 +214,7 @@ PROPOSED ──► CHANGES_REQUESTED ──(作者或审核人提新修订)─�
   修订不参与。自然语言层面的冲突检查不在本 RFC 范围。
 - 一旦判定冲突,记 CONFLICT_FLAGGED,涉及的候选不能批准,涉及的已批准修订停止投递,直到有人解决:驳回
   候选、撤回其中一方,或批准一版不再冲突的修订。解决后立刻恢复。
-- 这条规则的一个后果:任何人或 agent 提一条带相反断言的候选,就会让对应的已批准 judgment 暂停投递,直到
+- 这是所有者的裁定(Decision 10),它的一个后果是:任何人或 agent 提一条带相反断言的候选,就会让对应的已批准 judgment 暂停投递,直到
   有人处理。所以冲突项在审核队列里置顶,暂停和恢复都写进 `judgment_events`,第 8 节的指标里统计暂停时长。
 
 ## 6. 方案细节
@@ -268,11 +262,21 @@ PROPOSED ──► CHANGES_REQUESTED ──(作者或审核人提新修订)─�
 - 模型不再能改动或删除已生效的内容。Layer2 调和出的 UPDATE / SUPERSEDE 改为「对某条 judgment 提一版
   候选修订」;NOOP 不变。
 - `lumo memory project-add`、`push`、`promote` 这些手动入口也改为产生候选,`captureMethod = EXPLICIT`。
-- 任务级工作笔记(`MemoryScope.TASK`)是否保留待定(第 3 节)。下文按保留写:留在 `memories` 表,继续由
-  Layer1 自动写,只注入同一任务的后续会话,从不同步(现状就是这样:同步包只取项目级)。
+- 任务级工作笔记(`MemoryScope.TASK`)停止注入(Decision 11),细节见下。
 
-Layer1 不直接产生候选的原因:它每个 Stop 回合都跑,候选量会远多于人能审的量。**这个量没有实测数据**,
-第 8 节的指标里包含它。
+**任务级笔记下线的细节。** 核实到两处依赖,实现时要先处理:
+
+- Layer1 的第一次模型调用同时产出回合摘要和记忆候选(`lib/services/memory/layer1.service.ts`,摘要经
+  `hookEventRepository.setTurnSummary` 写入)。回合摘要有别的用途(例如 `lib/agent-run/run-digest.ts`),
+  它是单独的 AI 功能开关(`lib/ai-features/registry.ts` 的 `turnSummary`)。所以下线的是候选抽取、调和
+  和写入;摘要这一半要拆出来保留。
+- Layer2 现在的输入就是任务级笔记(`lib/services/memory/layer2-input.ts`,每个项目最多 200 条)。笔记
+  不再写之后,Layer2 要改成直接读任务的回合摘要、任务决定和会话事件。**改输入之后 Layer2 的产出质量
+  没有数据**,需要用现有的评测脚本(`scripts/eval/memory/`)重跑一次再上线。
+
+切换之后:任务级笔记不再出现在会话开始、attach 和 `lumo task show` 里;同一任务的后续会话靠回合摘要和
+任务决定续接。`lumo memory task-add` 改为提一条候选(带 `sourceTaskId`)。已有的任务级笔记和其他遗留
+记忆一样,不投递,可以转成候选。
 
 ### 6.4 分类与 kind(问题 4)
 
@@ -310,55 +314,57 @@ Layer1 不直接产生候选的原因:它每个 Stop 回合都跑,候选量会�
 
 ## 7. `lib/services/memory/` 各模块的去留
 
-「保留」指逻辑不变;「改接」指保留逻辑但输出从改 ACTIVE 行变成产生候选或提示;「限定」指只服务任务级
-笔记,或只服务还没有切换的工作区里的遗留记忆,最终随它们一起退场。
+「保留」指逻辑不变;「改接」指保留逻辑但输出从改 ACTIVE 行变成产生候选或提示;「限定」指只服务还没有切换的
+工作区,最终随遗留记忆一起退场。
 
-| 模块                                                                                                                | 现在做什么                                | 去留                                                                       |
-| ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------- |
-| `layer1.service` / `layer1-extract` / `layer1-input` / `layer1-prompt` / `layer1-reconcile-prompt` / `layer1-apply` | 每回合抽取并直接写入,可写项目级、可硬删除 | 限定:只写任务级笔记;去掉项目级 ADD 和对项目级行的 DELETE / SUPERSEDE       |
-| `local-grounding`                                                                                                   | 校验候选引用的原话确实出现在回合里        | 保留                                                                       |
-| `layer2.service` / `layer2-extract` / `layer2-input` / `layer2-prompt` / `layer2-reconcile-prompt`                  | 任务 DONE 时合并出项目级记忆              | 改接:输出候选和候选修订                                                    |
-| `layer2-apply`                                                                                                      | 写 ACTIVE 项目级行和 `MemoryProvenance`   | 改接:写 PROPOSED 修订;来源任务笔记记进 `sourceRefs`                        |
-| `milestone-distill.service` / `-extract` / `-input` / `-apply`                                                      | 复盘后写 ACTIVE 里程碑级记忆              | 改接:输出候选                                                              |
-| `ground-candidates`                                                                                                 | 模型做的「给出引用否则丢弃」              | 保留;引用写进 `evidence`                                                   |
-| `extraction-gate` / `screen-rejection`                                                                              | 拒收半句碎片和与 CLAUDE.md 重复的内容     | 保留,用在候选创建时                                                        |
-| `write-gate` 与 `lib/memory/poison-gate`                                                                            | 注入信号、agent 指令、与策略规则冲突      | 保留,用在候选创建和提修订时                                                |
-| `neighbor-retriever` / `embedding-neighbor-retriever` / `near-dup` / `manual-dedup` / `reconcile-parse`             | 找相近的已有记忆并决定合并                | 改接:只提示「与已批准的某条相近」,并把候选转成对那条的修订;不自动合并      |
-| `supersede-guard`                                                                                                   | 阻止模型覆盖被多次判定用到的记忆          | 限定:模型不能再覆盖已批准内容后失去作用,随遗留记忆退场                     |
-| `used-trap-delete`                                                                                                  | agent 硬删除被用过的 TRAP 时记一次越界    | 限定:只对遗留记忆有效。agent 不能删除已批准的 judgment                     |
-| `curation.service` / `curation-judge`                                                                               | DONE 时模型把明显错的记忆置为 INVALIDATED | 改接:对已批准的只附一条 challenges 证据并提示审核人;未切换的工作区保持现状 |
-| `retire.service`                                                                                                    | 列出退役候选,人确认后归档                 | 改接:候选信号不变,动作变成「建议撤回」,由人撤回                            |
-| `batch-consolidate.service`                                                                                         | 近重复合并建议,人确认后归档               | 改接:合并变成「对保留的那条提修订,其余建议撤回」                           |
-| `fold.service` / `fold-compute` / `fold-dispatch` 与 `lib/memory/fold-schemas`                                      | 超过 80 条时把细卡折成粗卡并替换原卡      | 限定:只对遗留记忆运行。对已批准内容关闭,因为它在没有审核的情况下改写内容   |
-| `compaction.service`                                                                                                | 每小时把最冷的记忆归档                    | 限定:只对遗留记忆。候选的过期由状态机的 EXPIRED 处理                       |
-| `relevance-gate` / `relevance-gate.constants` / `index-disclosure` / `disclosure-reachability`                      | 会话开始时选哪些进索引                    | 保留;前面加一层适用范围过滤                                                |
-| `memory-read.service`                                                                                               | 按 id 读取                                | 保留;新增 judgment 的读取                                                  |
-| `memory-sync.service` / `sync-bundle` / `sync-file-shape`                                                           | 生成同步包和本地文件形态                  | 保留并扩展:加入 judgment、加注入防护、加版本号                             |
-| `canonicalize-language`                                                                                             | 把中文内容转成英文再存                    | 保留,用于候选;原文保留在 `sourceRefs` 指向的来源里                         |
-| `constitution`                                                                                                      | 读取仓库的 CLAUDE.md / AGENTS.md          | 保留                                                                       |
-| `lib/memory/content-text` / `render` / `list-view` / `schemas` / `pipeline-switch`                                  | 文本化、渲染、列表、内容 schema、总开关   | 保留;`render` 增加 judgment 的渲染;`schemas` 随遗留记忆退场                |
+| 模块                                                                                                                | 现在做什么                                    | 去留                                                                              |
+| ------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- | --------------------------------------------------------------------------------- |
+| `layer1.service` / `layer1-extract` / `layer1-input` / `layer1-prompt` / `layer1-reconcile-prompt` / `layer1-apply` | 每回合产出回合摘要,并抽取、调和、直接写入记忆 | 下线记忆抽取(Decision 11):只保留回合摘要这一半;调和与写入随未切换的工作区一起退场 |
+| `local-grounding`                                                                                                   | 校验 Layer1 候选引用的原话确实出现在回合里    | 限定:只被 Layer1 使用,随它退场                                                    |
+| `layer2.service` / `layer2-extract` / `layer2-input` / `layer2-prompt` / `layer2-reconcile-prompt`                  | 任务 DONE 时从任务级笔记合并出项目级记忆      | 改接:输入改为回合摘要、任务决定和会话事件;输出候选和候选修订                      |
+| `layer2-apply`                                                                                                      | 写 ACTIVE 项目级行和 `MemoryProvenance`       | 改接:写 PROPOSED 修订;来源会话和任务记进 `sourceRefs`                             |
+| `milestone-distill.service` / `-extract` / `-input` / `-apply`                                                      | 复盘后写 ACTIVE 里程碑级记忆                  | 改接:输出候选                                                                     |
+| `ground-candidates`                                                                                                 | 模型做的「给出引用否则丢弃」                  | 保留;引用写进 `evidence`                                                          |
+| `extraction-gate` / `screen-rejection`                                                                              | 拒收半句碎片和与 CLAUDE.md 重复的内容         | 保留,用在候选创建时                                                               |
+| `write-gate` 与 `lib/memory/poison-gate`                                                                            | 注入信号、agent 指令、与策略规则冲突          | 保留,用在候选创建和提修订时                                                       |
+| `neighbor-retriever` / `embedding-neighbor-retriever` / `near-dup` / `manual-dedup` / `reconcile-parse`             | 找相近的已有记忆并决定合并                    | 改接:只提示「与已批准的某条相近」,并把候选转成对那条的修订;不自动合并             |
+| `supersede-guard`                                                                                                   | 阻止模型覆盖被多次判定用到的记忆              | 限定:模型不能再覆盖已批准内容后失去作用,随遗留记忆退场                            |
+| `used-trap-delete`                                                                                                  | agent 硬删除被用过的 TRAP 时记一次越界        | 限定:只对遗留记忆有效。agent 不能删除已批准的 judgment                            |
+| `curation.service` / `curation-judge`                                                                               | DONE 时模型把明显错的记忆置为 INVALIDATED     | 改接:对已批准的只附一条 challenges 证据并提示审核人;未切换的工作区保持现状        |
+| `retire.service`                                                                                                    | 列出退役候选,人确认后归档                     | 改接:候选信号不变,动作变成「建议撤回」,由人撤回                                   |
+| `batch-consolidate.service`                                                                                         | 近重复合并建议,人确认后归档                   | 改接:合并变成「对保留的那条提修订,其余建议撤回」                                  |
+| `fold.service` / `fold-compute` / `fold-dispatch` 与 `lib/memory/fold-schemas`                                      | 超过 80 条时把细卡折成粗卡并替换原卡          | 限定:只对遗留记忆运行。对已批准内容关闭,因为它在没有审核的情况下改写内容          |
+| `compaction.service`                                                                                                | 每小时把最冷的记忆归档                        | 限定:只对遗留记忆。候选的过期由状态机的 EXPIRED 处理                              |
+| `relevance-gate` / `relevance-gate.constants` / `index-disclosure` / `disclosure-reachability`                      | 会话开始时选哪些进索引                        | 保留;前面加一层适用范围过滤                                                       |
+| `memory-read.service`                                                                                               | 按 id 读取                                    | 保留;新增 judgment 的读取                                                         |
+| `memory-sync.service` / `sync-bundle` / `sync-file-shape`                                                           | 生成同步包和本地文件形态                      | 保留并扩展:加入 judgment、加注入防护、加版本号                                    |
+| `canonicalize-language`                                                                                             | 把中文内容转成英文再存                        | 保留,用于候选;原文保留在 `sourceRefs` 指向的来源里                                |
+| `constitution`                                                                                                      | 读取仓库的 CLAUDE.md / AGENTS.md              | 保留                                                                              |
+| `lib/memory/content-text` / `render` / `list-view` / `schemas` / `pipeline-switch`                                  | 文本化、渲染、列表、内容 schema、总开关       | 保留;`render` 增加 judgment 的渲染;`schemas` 随遗留记忆退场                       |
 
 入口的变化:
 
-- CLI:新增 `lumo judgment propose | revise | list | show | inbox | context`。`lumo memory task-*` 继续管任务
-  笔记;`lumo memory project-add`、`push`、`promote` 改为产生候选;`lumo memory delete` 对已批准内容返回拒绝。
+- CLI:新增 `lumo judgment propose | revise | list | show | inbox | context`。`lumo memory task-add`、`project-add`、`push`、`promote`
+  改为产生候选;`lumo memory task-list` 只在未切换的工作区有内容;`lumo memory delete` 对已批准内容返回拒绝。
   改 `cli/src/commands/` 要同步 `cli/skill/` 并重新生成 grammar.json。
 - Web:记忆页增加「待审」队列和审核页(看确切修订、信号、相近条目、来源,可编辑后批准)。
 - 会话开始的 Review needed 段(`lib/memory/render.ts:218`)在第 3 阶段删除,它被人的审核队列取代。
 
 ## 8. 分阶段计划
 
-每阶段可单独发布。第 1 到 3 阶段由一个工作区级开关控制,关掉即回到上一阶段的行为;第 0 阶段没有开关。
+每阶段可单独发布。第 1 到 3 阶段由一个工作区级设置控制,它有三个值:OFF(今天的行为)、REVIEW(第 1、2
+阶段:可以提候选、转换和审核,投递不变)、CUTOVER(第 3 阶段)。往回调一档就回到上一阶段的行为;第 0 阶段
+没有开关。
 
-| 阶段       | 内容                                                                                                                                                                                                                                                                                                    | 上线后的行为变化                                                       | 回滚                                                                             |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| 0 补缺口   | 同步路径加注入防护(6.1)                                                                                                                                                                                                                                                                                 | 所有工作区的同步文件都经过防护                                         | 回退这次发布                                                                     |
-| 1 准入     | 三张新表(纯新增迁移);`lumo judgment propose / revise / list / show / inbox`;Web 审核队列与批准、驳回、要求修改、撤回;冲突判定;写入防护;来源标注修正                                                                                                                                                     | 可以提候选、可以审核;投递不变,仍是遗留记忆                             | 关开关;新表留着不用                                                              |
-| 2 存量转换 | 遗留记忆逐条和批量「转成候选」;审核页显示遗留来源;`lumo judgment context`;切换前的预览(切换后 agent 会收到哪些、会少掉哪些)                                                                                                                                                                             | 工作区可以在切换前把要留的遗留记忆审完;投递不变                        | 关开关                                                                           |
-| 3 切换     | 同一个开关同时做三件事:投递改为只有已批准的 judgment(同步包、会话开始索引、attach 卡片、`task show`);Layer2、里程碑提炼、PR 评审学习、手动添加改为产生候选,Layer1 限定为任务级;fold、冷淘汰、DONE 失效判定不再改动项目级内容,Review needed 段不再出现。judged-used 覆盖 judgment;撤回和冲突触发重新同步 | agent 只收到批准过的内容;遗留记忆停止投递;不再产生新的未审核项目级记忆 | 关开关:投递回到遗留记忆,抽取恢复直接写 ACTIVE。遗留行全程没被改过,不需要恢复脚本 |
-| 4 收尾     | 所有工作区切换完之后,删除只服务遗留记忆的模块和开关;如需删除列、表或枚举值,按 `docs/database-migrations.md` 分两次发布                                                                                                                                                                                  | 无对客变化                                                             | 收尾本身不可逆,单独裁定                                                          |
+| 阶段       | 内容                                                                                                                                                                                                                                                                                                                                   | 上线后的行为变化                                                       | 回滚                                                                                                                                    |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 0 补缺口   | 同步路径加注入防护(6.1)                                                                                                                                                                                                                                                                                                                | 所有工作区的同步文件都经过防护                                         | 回退这次发布                                                                                                                            |
+| 1 准入     | 三张新表(纯新增迁移);`lumo judgment propose / revise / list / show / inbox`;Web 审核队列与批准、驳回、要求修改、撤回;冲突判定;写入防护;来源标注修正                                                                                                                                                                                    | 可以提候选、可以审核;投递不变,仍是遗留记忆                             | 设置调回 OFF;新表留着不用                                                                                                               |
+| 2 存量转换 | 遗留记忆逐条和批量「转成候选」;审核页显示遗留来源;`lumo judgment context`;切换前的预览(切换后 agent 会收到哪些、会少掉哪些)                                                                                                                                                                                                            | 工作区可以在切换前把要留的遗留记忆审完;投递不变                        | 设置调回 OFF                                                                                                                            |
+| 3 切换     | 设置调到 CUTOVER 时同时做三件事:投递改为只有已批准的 judgment(同步包、会话开始索引、attach 卡片、`task show`);Layer2、里程碑提炼、PR 评审学习、手动添加改为产生候选,Layer1 的记忆抽取停止、任务级笔记不再注入;fold、冷淘汰、DONE 失效判定不再改动项目级内容,Review needed 段不再出现。judged-used 覆盖 judgment;撤回和冲突触发重新同步 | agent 只收到批准过的内容;遗留记忆停止投递;不再产生新的未审核项目级记忆 | 设置调回 REVIEW 或 OFF:投递回到遗留记忆,抽取恢复直接写 ACTIVE。遗留行全程没被改过,不需要恢复脚本;切换期间没有写下的任务级笔记不会补回来 |
+| 4 收尾     | 所有工作区切换完之后,删除只服务遗留记忆的模块和开关;如需删除列、表或枚举值,按 `docs/database-migrations.md` 分两次发布                                                                                                                                                                                                                 | 无对客变化                                                             | 收尾本身不可逆,单独裁定                                                                                                                 |
 
-切换是每个工作区自己的动作,由 OWNER 在设置里打开;新建的工作区是否默认已切换,以及是否给存量工作区定
+切换是每个工作区自己的动作,由 OWNER 在设置里调到 CUTOVER;新建的工作区是否默认已切换,以及是否给存量工作区定
 一个统一的切换期限,等 Decision 9 说的指标出来后再定。在那之前,没切换的工作区保持今天的行为。
 
 在 Lumo 自己的工作区切换前后要看的指标(Decision 9):
@@ -384,8 +390,8 @@ Layer1 不直接产生候选的原因:它每个 Stop 回合都跑,候选量会�
    `captureMethod = MIGRATED`,`origin` 一律预填 UNKNOWN(因为第 1 节的标注问题,有成员 id 也不能证明是
    人写的),`legacyMemoryId` 指回原行。审核人补全来源、理由和适用条件后批准。
 3. **批量转换。** 按分类或按 judged-used 排序批量生成候选;映射是确定性的,不调用模型。
-4. **切换前预览。** 设置页在打开开关前显示:已批准多少条、还有多少条遗留记忆没转换、切换后 agent 收到的
-   条数会怎么变。没有任何已批准内容时,打开开关需要再确认一次。
+4. **切换前预览。** 设置页在调到 CUTOVER 之前显示:已批准多少条、还有多少条遗留记忆没转换、切换后 agent 收到的
+   条数会怎么变。没有任何已批准内容时,调到 CUTOVER 需要再确认一次。
 5. **切换后。** 遗留记忆仍可查看、仍可继续转换,只是不再投递。
 
 对客影响要在 PR 描述和发布说明里写明:工作区切换的那一刻,没有被转换并批准的团队记忆不再到达 agent。
@@ -394,7 +400,7 @@ Layer1 不直接产生候选的原因:它每个 Stop 回合都跑,候选量会�
 
 回滚:
 
-- 任何时候关掉开关,投递回到只看 `memories`,行为与今天一致。转换和批准都没有改过遗留行,不需要恢复。
+- 任何时候把设置调回 REVIEW 或 OFF,投递回到只看 `memories`,行为与今天一致。转换和批准都没有改过遗留行,不需要恢复。
 - 全程不删除 `memories` 行,不删除 `prisma/migrations/` 里的文件。
 - `MemoryCategory`、`MemoryStatus`、`MemoryScope` 的枚举值在第 4 阶段之前都不动。
 
