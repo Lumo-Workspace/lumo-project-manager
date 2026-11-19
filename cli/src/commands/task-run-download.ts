@@ -70,8 +70,9 @@ export async function taskRunDownload(
   task: string,
   opts: TaskRunDownloadOptions
 ): Promise<number | void> {
-  const output = opts.output?.trim()
-  if (!output) {
+  // Used as given: a path may begin or end with a space.
+  const output = opts.output ?? ''
+  if (!output.trim()) {
     console.error('Error: missing -o <file>, e.g. -o records.jsonl')
     return EXIT_USAGE
   }
@@ -104,7 +105,11 @@ export async function taskRunDownload(
   // Checked before the file is opened: a response of another shape is not a
   // write error and must not leave a file behind.
   const runs = r.data.runs
-  if (!Array.isArray(runs) || runs.some(run => !Array.isArray(run?.items))) {
+  const isRecord = (v: unknown) => !!v && typeof v === 'object'
+  if (
+    !Array.isArray(runs) ||
+    runs.some(run => !Array.isArray(run?.items) || !run.items.every(isRecord))
+  ) {
     console.error(
       'Error: the server returned session records in an unexpected shape'
     )

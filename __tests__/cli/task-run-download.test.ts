@@ -325,13 +325,31 @@ describe('taskRunDownload', () => {
       runs: [{ ...TIMELINE.runs[2], items: null }],
     }
     const fetchSpy = jest.spyOn(global, 'fetch')
-    for (const body of [{}, { runs: 'x' }, noItems, { runs: [null] }]) {
+    const nullItem = {
+      ...TIMELINE,
+      runs: [{ ...TIMELINE.runs[2], items: [null] }],
+    }
+    for (const body of [
+      {},
+      { runs: 'x' },
+      noItems,
+      nullItem,
+      { runs: [null] },
+    ]) {
       fetchSpy.mockResolvedValue(ok(body))
       expect(await taskRunDownload('LUM-9', { output: out })).toBe(1)
       expect(existsSync(out)).toBe(false)
     }
     expect(stderr()).toContain('unexpected shape')
     expect(logSpy).not.toHaveBeenCalled()
+  })
+
+  it('writes to the path as given, spaces included', async () => {
+    const spaced = join(dir, ' records.jsonl ')
+    jest.spyOn(global, 'fetch').mockResolvedValue(ok(TIMELINE))
+    expect(await taskRunDownload('LUM-9', { output: spaced })).toBeUndefined()
+    expect(existsSync(spaced)).toBe(true)
+    expect(existsSync(out)).toBe(false)
   })
 
   it('uses the same marker keys as the server', () => {
