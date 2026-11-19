@@ -1,4 +1,4 @@
-import { closeSync, existsSync, openSync, writeSync } from 'fs'
+import { closeSync, existsSync, openSync, rmSync, writeSync } from 'fs'
 import { EXIT_USAGE } from '../lib/exit-codes'
 import { cmd, hint } from '../lib/feedback'
 import { sanitizeField } from '../lib/sanitize'
@@ -96,9 +96,13 @@ export async function taskRunDownload(
   if (!r.ok || !r.data) return 1
   const runs = r.data.runs ?? []
 
+  // Only a file this run creates is removed when the export fails part-way.
+  const replacing = !!opts.force && existsSync(output)
   let fd: number
   try {
-    fd = openSync(output, opts.force ? 'w' : 'wx')
+    // 0600: the records hold prompts and tool output, so a new file is
+    // readable by its owner only. An overwritten file keeps its own mode.
+    fd = openSync(output, opts.force ? 'w' : 'wx', 0o600)
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code
     console.error(
@@ -114,6 +118,7 @@ export async function taskRunDownload(
   let pruned = 0
   let stripped = 0
   let runsWithEvents = 0
+  let writeError: unknown = null
   try {
     for (const run of runs) {
       let inRun = 0
@@ -140,8 +145,26 @@ export async function taskRunDownload(
       events += inRun
       if (inRun > 0) runsWithEvents++
     }
+  } catch (err) {
+    writeError = err
   } finally {
     closeSync(fd)
+  }
+  if (writeError) {
+    // A partial file would pass for a complete export, so do not leave one.
+    if (!replacing) rmSync(output, { force: true })
+    const code = (writeError as NodeJS.ErrnoException).code
+    console.error(
+      `Error: could not write ${sanitizeField(output)} (${code ?? String(writeError)})`
+    )
+    console.error(
+      hint(
+        replacing
+          ? 'the file is incomplete; run the command again'
+          : 'nothing was saved; run the command again'
+      )
+    )
+    return 1
   }
 
   console.log(

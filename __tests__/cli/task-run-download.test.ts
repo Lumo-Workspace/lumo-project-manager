@@ -7,11 +7,12 @@ jest.mock('@/cli/src/lib/config', () => ({
   })),
 }))
 
-import {
+import fs, {
   existsSync,
   mkdtempSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from 'fs'
 import { tmpdir } from 'os'
@@ -241,6 +242,44 @@ describe('taskRunDownload', () => {
       .mockResolvedValue(ok({ ...TIMELINE, runs: [TIMELINE.runs[2]] }))
     await taskRunDownload('LUM-9', { output: out })
     expect(stdout()).toContain('Saved 1 event of LUM-9 (1 run, ')
+  })
+
+  it('creates the file readable by its owner only', async () => {
+    jest.spyOn(global, 'fetch').mockResolvedValue(ok(TIMELINE))
+    await taskRunDownload('LUM-9', { output: out })
+    expect(statSync(out).mode & 0o777).toBe(0o600)
+  })
+
+  it('exits 1 and removes the file it created when a write fails part-way', async () => {
+    jest.spyOn(global, 'fetch').mockResolvedValue(ok(TIMELINE))
+    const realWrite = fs.writeSync
+    let calls = 0
+    jest.spyOn(fs, 'writeSync').mockImplementation(((
+      ...args: Parameters<typeof fs.writeSync>
+    ) => {
+      if (++calls === 3)
+        throw Object.assign(new Error('no space'), { code: 'ENOSPC' })
+      return realWrite(...args)
+    }) as typeof fs.writeSync)
+    const code = await taskRunDownload('LUM-9', { output: out })
+    expect(code).toBe(1)
+    expect(existsSync(out)).toBe(false)
+    expect(stderr()).toContain('ENOSPC')
+    expect(stderr()).toContain('nothing was saved')
+    expect(logSpy).not.toHaveBeenCalled()
+  })
+
+  it('keeps an overwritten file and says it is incomplete when a --force write fails', async () => {
+    writeFileSync(out, 'old')
+    jest.spyOn(global, 'fetch').mockResolvedValue(ok(TIMELINE))
+    jest.spyOn(fs, 'writeSync').mockImplementation(() => {
+      throw Object.assign(new Error('io'), { code: 'EIO' })
+    })
+    const code = await taskRunDownload('LUM-9', { output: out, force: true })
+    expect(code).toBe(1)
+    expect(existsSync(out)).toBe(true)
+    expect(stderr()).toContain('the file is incomplete')
+    expect(logSpy).not.toHaveBeenCalled()
   })
 
   it('uses the same marker keys as the server', () => {
