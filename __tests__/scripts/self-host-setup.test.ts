@@ -391,14 +391,16 @@ describe('scripts/self-host/setup.sh', () => {
     expect(runWithDocker(['--check', '--local']).status).toBe(2)
   })
 
+  /** The one lumo call `--local` makes to connect the CLI (LUM-1337). */
+  const LOGIN =
+    'lumo auth login --url http://localhost:3000 --no-paste --no-bind'
+
   /**
    * A fake lumo: logs its arguments; whoami answers WHOAMI, login exits
    * LOGIN_EXIT. Since LUM-1337 setup.sh no longer asks whoami — a login is
    * added next to any other — so the whoami answer only shows that the
    * outcome is the same whatever the CLI was logged in to before.
    */
-  const LOGIN =
-    'lumo auth login --url http://localhost:3000 --no-paste --no-bind'
   const fakeLumo = (whoami: string | null, loginExit = 0) =>
     [
       '#!/bin/sh',

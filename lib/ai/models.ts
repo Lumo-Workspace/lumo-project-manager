@@ -105,9 +105,9 @@ export const REWARD_HACK_MODEL = 'anthropic/claude-sonnet-4.6'
  * Boundary-crossing triage (LUM-945) — after the rule detectors record a
  * crossing, this model reads the task context and returns P(legit). TypeSafe
  * Jev is an EVALUATION model (typed question → probability), not a language
- * model: it is called through `@/ee/security/ai/evaluation`, never
- * `gateway(id)`. Chosen on the LUM-945 offline comparison (372 human-labelled
- * production crossings; boolean question).
+ * model: it is called through the security plugin's evaluation wrapper,
+ * never `gateway(id)`. Chosen on the LUM-945 offline comparison (372
+ * human-labelled production crossings; boolean question).
  *
  * Zero data retention since LUM-1349. Catalog 2026-11-18: the alias has two
  * endpoints — `typesafe-ai` (ZDR) and `digitalocean` (`zdr: none`); the
