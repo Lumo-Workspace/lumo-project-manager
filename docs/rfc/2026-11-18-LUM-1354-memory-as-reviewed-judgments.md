@@ -54,8 +54,8 @@ judgment,流程跟随它,并做成团队层。他没有说明理由,本文不替
 ## 3. 所有者的裁定
 
 所有者 2026-11-19 的裁定共十条。原先列出的 8 个问题按推荐(「8 个问题都按推荐来」);随后两句话改了其中
-一条并新增两条:「只有批准过的修订会被取用，断言冲突会同时暂停准入和复用,直到解决」和「停止注入」。第二句取代了问题 5 原先的推荐
-(遗留记忆标「未审核」继续投递)和第 5 节原先的冲突处理(已生效的继续投递)。
+一条并新增两条:「只有批准过的修订会被取用，断言冲突会同时暂停准入和复用,直到解决」和「停止注入」。其中「只有批准过的修订会被取用」取代了问题 5 原先的推荐
+(遗留记忆标「未审核」继续投递),「断言冲突…」取代了第 5 节原先的冲突处理(已生效的继续投递),「停止注入」回答的是任务级工作笔记。
 
 | #   | 问题              | 裁定                                                                                                                      | 记录        |
 | --- | ----------------- | ------------------------------------------------------------------------------------------------------------------------- | ----------- |
@@ -126,13 +126,14 @@ proofpress 这边,`docs/MATCHING-DISCUSSION.md` 把「发现候选」和「判�
 
 **`judgment_revisions`:一行是一版修订**
 
-内容字段写入后不再改,`digest` 覆盖全部内容字段(下表除 `id`、`version`、`digest`、`state`、`contentSignals`、
+内容字段写入后不再改,`digest` 覆盖全部内容字段(下表除 `id`、`workspaceId`、`version`、`digest`、`state`、`contentSignals`、
 `embedding` 以外的各列)。`contentSignals` 和 `embedding` 在写入时算一次,之后也不改。唯一会变的是 `state`,
 它是治理状态,不进 `digest`,只能随一条 `judgment_events` 记录一起改。
 
 | 字段                                                   | 类型                    | 对应 proofpress           | 说明                                                                          |
 | ------------------------------------------------------ | ----------------------- | ------------------------- | ----------------------------------------------------------------------------- |
 | `id`、`judgmentId`、`version`                          | cuid、string、int       | id / version              | `(judgmentId, version)` 唯一                                                  |
+| `workspaceId`                                          | string                  | 无                        | 租户边界,与所属 judgment 一致;所有查询必带                                    |
 | `digest`                                               | string                  | digest                    | 规范化内容的 sha256;批准、撤回都要带它                                        |
 | `baseRevisionId`                                       | string?                 | links.revises             | 这一版改的是哪一版                                                            |
 | `description`                                          | string                  | description               | 一行摘要,用作索引行                                                           |
@@ -160,7 +161,7 @@ proofpress 这边,`docs/MATCHING-DISCUSSION.md` 把「发现候选」和「判�
 **`judgment_events`:只追加的治理记录**
 
 `id`、`workspaceId`、`judgmentId`、`revisionId`、`revisionDigest`、`type`(PROPOSED / CHANGES_REQUESTED /
-REJECTED / APPROVED / WITHDRAWN / EXPIRED / CONFLICT_FLAGGED)、`actorMemberId`、`channel`(WEB / CLI /
+REJECTED / APPROVED / WITHDRAWN / EXPIRED / CONFLICT_FLAGGED / CONFLICT_RESOLVED / CHALLENGED)、`actorMemberId`、`channel`(WEB / CLI /
 PIPELINE)、`reason`、`createdAt`。批准记录只在这张表里,导出 judgment 内容时不带出去(与 proofpress 一致:
 批准权不随导出的 JSON 走)。
 
@@ -326,30 +327,30 @@ PROPOSED ──► CHANGES_REQUESTED ──(作者或审核人提新修订)─�
 「保留」指逻辑不变;「改接」指保留逻辑但输出从改 ACTIVE 行变成产生候选或提示;「限定」指只服务还没有切换的
 工作区,最终随遗留记忆一起退场。
 
-| 模块                                                                                                                | 现在做什么                                    | 去留                                                                              |
-| ------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- | --------------------------------------------------------------------------------- |
-| `layer1.service` / `layer1-extract` / `layer1-input` / `layer1-prompt` / `layer1-reconcile-prompt` / `layer1-apply` | 每回合产出回合摘要,并抽取、调和、直接写入记忆 | 下线记忆抽取(Decision 11):只保留回合摘要这一半;调和与写入随未切换的工作区一起退场 |
-| `local-grounding`                                                                                                   | 校验 Layer1 候选引用的原话确实出现在回合里    | 限定:只被 Layer1 使用,随它退场                                                    |
-| `layer2.service` / `layer2-extract` / `layer2-input` / `layer2-prompt` / `layer2-reconcile-prompt`                  | 任务 DONE 时从任务级笔记合并出项目级记忆      | 改接:输入改为回合摘要、任务决定和会话事件;输出候选和候选修订                      |
-| `layer2-apply`                                                                                                      | 写 ACTIVE 项目级行和 `MemoryProvenance`       | 改接:写 PROPOSED 修订;来源会话和任务记进 `sourceRefs`                             |
-| `milestone-distill.service` / `-extract` / `-input` / `-apply`                                                      | 复盘后写 ACTIVE 里程碑级记忆                  | 改接:输出候选                                                                     |
-| `ground-candidates`                                                                                                 | 模型做的「给出引用否则丢弃」                  | 保留;引用写进 `evidence`                                                          |
-| `extraction-gate` / `screen-rejection`                                                                              | 拒收半句碎片和与 CLAUDE.md 重复的内容         | 保留,用在候选创建时                                                               |
-| `write-gate` 与 `lib/memory/poison-gate`                                                                            | 注入信号、agent 指令、与策略规则冲突          | 保留,用在候选创建和提修订时                                                       |
-| `neighbor-retriever` / `embedding-neighbor-retriever` / `near-dup` / `manual-dedup` / `reconcile-parse`             | 找相近的已有记忆并决定合并                    | 改接:只提示「与已批准的某条相近」,并把候选转成对那条的修订;不自动合并             |
-| `supersede-guard`                                                                                                   | 阻止模型覆盖被多次判定用到的记忆              | 限定:模型不能再覆盖已批准内容后失去作用,随遗留记忆退场                            |
-| `used-trap-delete`                                                                                                  | agent 硬删除被用过的 TRAP 时记一次越界        | 限定:只对遗留记忆有效。agent 不能删除已批准的 judgment                            |
-| `curation.service` / `curation-judge`                                                                               | DONE 时模型把明显错的记忆置为 INVALIDATED     | 改接:对已批准的只附一条 challenges 证据并提示审核人;未切换的工作区保持现状        |
-| `retire.service`                                                                                                    | 列出退役候选,人确认后归档                     | 改接:候选信号不变,动作变成「建议撤回」,由人撤回                                   |
-| `batch-consolidate.service`                                                                                         | 近重复合并建议,人确认后归档                   | 改接:合并变成「对保留的那条提修订,其余建议撤回」                                  |
-| `fold.service` / `fold-compute` / `fold-dispatch` 与 `lib/memory/fold-schemas`                                      | 超过 80 条时把细卡折成粗卡并替换原卡          | 限定:只对遗留记忆运行。对已批准内容关闭,因为它在没有审核的情况下改写内容          |
-| `compaction.service`                                                                                                | 每小时把最冷的记忆归档                        | 限定:只对遗留记忆。候选的过期由状态机的 EXPIRED 处理                              |
-| `relevance-gate` / `relevance-gate.constants` / `index-disclosure` / `disclosure-reachability`                      | 会话开始时选哪些进索引                        | 保留;前面加一层适用范围过滤                                                       |
-| `memory-read.service`                                                                                               | 按 id 读取                                    | 保留;新增 judgment 的读取                                                         |
-| `memory-sync.service` / `sync-bundle` / `sync-file-shape`                                                           | 生成同步包和本地文件形态                      | 保留并扩展:加入 judgment、加注入防护、加版本号                                    |
-| `canonicalize-language`                                                                                             | 把中文内容转成英文再存                        | 保留,用于候选;原文保留在 `sourceRefs` 指向的来源里                                |
-| `constitution`                                                                                                      | 读取仓库的 CLAUDE.md / AGENTS.md              | 保留                                                                              |
-| `lib/memory/content-text` / `render` / `list-view` / `schemas` / `pipeline-switch`                                  | 文本化、渲染、列表、内容 schema、总开关       | 保留;`render` 增加 judgment 的渲染;`schemas` 随遗留记忆退场                       |
+| 模块                                                                                                                | 现在做什么                                    | 去留                                                                                                              |
+| ------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `layer1.service` / `layer1-extract` / `layer1-input` / `layer1-prompt` / `layer1-reconcile-prompt` / `layer1-apply` | 每回合产出回合摘要,并抽取、调和、直接写入记忆 | 下线记忆抽取(Decision 11):只保留回合摘要这一半;调和与写入随未切换的工作区一起退场                                 |
+| `local-grounding`                                                                                                   | 校验 Layer1 候选引用的原话确实出现在回合里    | 限定:只被 Layer1 使用,随它退场                                                                                    |
+| `layer2.service` / `layer2-extract` / `layer2-input` / `layer2-prompt` / `layer2-reconcile-prompt`                  | 任务 DONE 时从任务级笔记合并出项目级记忆      | 改接:输入改为回合摘要、任务决定和会话事件;输出候选和候选修订                                                      |
+| `layer2-apply`                                                                                                      | 写 ACTIVE 项目级行和 `MemoryProvenance`       | 改接:写 PROPOSED 修订;来源会话和任务记进 `sourceRefs`                                                             |
+| `milestone-distill.service` / `-extract` / `-input` / `-apply`                                                      | 复盘后写 ACTIVE 里程碑级记忆                  | 改接:输出候选                                                                                                     |
+| `ground-candidates`                                                                                                 | 模型做的「给出引用否则丢弃」                  | 保留;引用写进 `evidence`                                                                                          |
+| `extraction-gate` / `screen-rejection`                                                                              | 拒收半句碎片和与 CLAUDE.md 重复的内容         | 保留,用在候选创建时                                                                                               |
+| `write-gate` 与 `lib/memory/poison-gate`                                                                            | 注入信号、agent 指令、与策略规则冲突          | 保留,用在候选创建和提修订时                                                                                       |
+| `neighbor-retriever` / `embedding-neighbor-retriever` / `near-dup` / `manual-dedup` / `reconcile-parse`             | 找相近的已有记忆并决定合并                    | 改接:只提示「与已批准的某条相近」,并把候选转成对那条的修订;不自动合并                                             |
+| `supersede-guard`                                                                                                   | 阻止模型覆盖被多次判定用到的记忆              | 限定:模型不能再覆盖已批准内容后失去作用,随遗留记忆退场                                                            |
+| `used-trap-delete`                                                                                                  | agent 硬删除被用过的 TRAP 时记一次越界        | 限定:只对遗留记忆有效。agent 不能删除已批准的 judgment                                                            |
+| `curation.service` / `curation-judge`                                                                               | DONE 时模型把明显错的记忆置为 INVALIDATED     | 改接:对已批准的不改修订内容,只记一条 `judgment_events`(类型 CHALLENGED,带依据)并提示审核人;未切换的工作区保持现状 |
+| `retire.service`                                                                                                    | 列出退役候选,人确认后归档                     | 改接:候选信号不变,动作变成「建议撤回」,由人撤回                                                                   |
+| `batch-consolidate.service`                                                                                         | 近重复合并建议,人确认后归档                   | 改接:合并变成「对保留的那条提修订,其余建议撤回」                                                                  |
+| `fold.service` / `fold-compute` / `fold-dispatch` 与 `lib/memory/fold-schemas`                                      | 超过 80 条时把细卡折成粗卡并替换原卡          | 限定:只对遗留记忆运行。对已批准内容关闭,因为它在没有审核的情况下改写内容                                          |
+| `compaction.service`                                                                                                | 每小时把最冷的记忆归档                        | 限定:只对遗留记忆。候选的过期由状态机的 EXPIRED 处理                                                              |
+| `relevance-gate` / `relevance-gate.constants` / `index-disclosure` / `disclosure-reachability`                      | 会话开始时选哪些进索引                        | 保留;前面加一层适用范围过滤                                                                                       |
+| `memory-read.service`                                                                                               | 按 id 读取                                    | 保留;新增 judgment 的读取                                                                                         |
+| `memory-sync.service` / `sync-bundle` / `sync-file-shape`                                                           | 生成同步包和本地文件形态                      | 保留并扩展:加入 judgment、加注入防护、加版本号                                                                    |
+| `canonicalize-language`                                                                                             | 把中文内容转成英文再存                        | 保留,用于候选;原文保留在 `sourceRefs` 指向的来源里                                                                |
+| `constitution`                                                                                                      | 读取仓库的 CLAUDE.md / AGENTS.md              | 保留                                                                                                              |
+| `lib/memory/content-text` / `render` / `list-view` / `schemas` / `pipeline-switch`                                  | 文本化、渲染、列表、内容 schema、总开关       | 保留;`render` 增加 judgment 的渲染;`schemas` 随遗留记忆退场                                                       |
 
 入口的变化:
 
@@ -400,9 +401,9 @@ PROPOSED ──► CHANGES_REQUESTED ──(作者或审核人提新修订)─�
    人写的),`legacyMemoryId` 指回原行。审核人补全来源、理由和适用条件后批准。
 3. **批量转换。** 按分类或按 judged-used 排序批量生成候选;映射是确定性的,不调用模型。
 4. **切换前预览与确认。** 设置页在调到 CUTOVER 之前显示:已批准多少条、还有多少条遗留记忆没转换、
-   切换后 agent 收到的条数从多少变成多少。只要这个数会变少,就必须由 OWNER 在看到这两个数字的页面上
+   切换后 agent 收到的条数从多少变成多少。只要这个数会变少,就必须由 OWNER 在显示这三个数字的页面上
    再确认一次才能切换;没有任何已批准内容时,确认页单独写明「切换后 agent 收不到任何团队记忆」。
-   这是提示,不是阻止:要不要在转换完之前切换,由 OWNER 决定。
+   确认之后就可以切换,系统不因为数字少而拒绝:要不要在转换完之前切换,由 OWNER 决定。
 5. **切换后。** 遗留记忆仍可查看、仍可继续转换,只是不再投递。
 
 对客影响要在 PR 描述和发布说明里写明:工作区切换的那一刻,没有被转换并批准的团队记忆不再到达 agent。
