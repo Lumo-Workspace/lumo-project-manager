@@ -138,21 +138,21 @@ describe('FAQ retention claims LUM-915', () => {
 
 /**
  * LUM-871 (moved from the core landing test in LUM-1065, with the client it
- * reads): the FAQ names boundary-crossing triage as the one request outside
- * the ZDR layer — true only while the evaluation client skips `zdr-fetch`.
+ * reads), reversed by LUM-1349: boundary-crossing triage now goes through the
+ * ZDR layer too, so the FAQ's "every request" sentence carries no exception —
+ * true only while the evaluation client sends through `createZdrFetch`.
  */
 describe('FAQ privacy claims LUM-871 (plugin side)', () => {
-  it('the crossing-triage evaluation client really bypasses the ZDR layer', () => {
+  it('the crossing-triage evaluation client sends through the ZDR layer, and the FAQ names no exception', () => {
     const src = readFileSync(
       join(process.cwd(), 'ee', 'security', 'ai', 'evaluation.ts'),
       'utf8'
     )
-    expect(src).not.toMatch(/zdr-fetch/)
-    // LUM-871 (moved from the core landing test in LUM-1035): triage is the
-    // one request outside the ZDR layer, so the ZDR sentence must name it.
-    expect(readLanding('faq.tsx')).toMatch(
-      /zero data retention enforced on the request itself for all but boundary-crossing triage/
-    )
-    expect(readLanding('faq.tsx')).toMatch(/does not offer zero data retention/)
+    expect(src).toMatch(/from '@\/lib\/ai\/zdr-fetch'/)
+    expect(src).toMatch(/createZdrFetch\(fetchImpl\)\(GATEWAY_EVALUATION_URL/)
+    const faq = readLanding('faq.tsx')
+    expect(faq).toMatch(/zero data retention enforced on the request itself\./)
+    expect(faq).not.toMatch(/all but boundary-crossing triage/)
+    expect(faq).not.toMatch(/does not offer zero data retention/)
   })
 })

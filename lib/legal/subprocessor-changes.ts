@@ -241,4 +241,30 @@ export const SUBPROCESSOR_CHANGES: readonly SubprocessorChange[] = [
       'Clerk (authentication) removed: its instance, and with it the account data it still held from before Lumo moved sign-in to its own authentication service, was deleted on 2026-10-28.',
     before: { list: 'infrastructure', entry: CLERK },
   },
+  {
+    // User ruling 2026-11-18 (LUM-1349 Decision 1): no wait. Triage (LUM-945)
+    // was announced as served by DigitalOcean without zero data retention.
+    // The AI Gateway has since added TypeSafe's own API as a host of the Jev
+    // model and routes to it first (probed 2026-11-18); it is the only host
+    // that offers zero data retention, so triage is pinned to it with ZDR
+    // forced. DigitalOcean stays listed for the open-weight models.
+    id: '2026-11-19-typesafe-added',
+    kind: 'added',
+    announcedAt: '2026-11-19',
+    effectiveAt: '2026-11-19',
+    urgent: {
+      reason:
+        "Correction of an outdated description: the Vercel AI Gateway already serves the Jev model from TypeSafe's own API as well as DigitalOcean, and restricting boundary-crossing triage to TypeSafe's API is what puts it under zero data retention.",
+    },
+    summary:
+      "TypeSafe AI (AI model hosting) added for boundary-crossing triage: the Jev model is now served only by TypeSafe's own API, under zero data retention. DigitalOcean no longer receives triage requests, and the earlier exception to zero data retention for triage ends.",
+    after: {
+      list: 'aiHost',
+      entry: {
+        gatewaySlug: 'typesafe-ai',
+        entity: 'TypeSafe AI',
+        location: 'globalRouting',
+      },
+    },
+  },
 ]

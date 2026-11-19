@@ -391,7 +391,16 @@ describe('scripts/self-host/setup.sh', () => {
     expect(runWithDocker(['--check', '--local']).status).toBe(2)
   })
 
-  /** A fake lumo: logs its arguments; whoami answers WHOAMI, login exits LOGIN_EXIT. */
+  /** The one lumo call `--local` makes to connect the CLI (LUM-1337). */
+  const LOGIN =
+    'lumo auth login --url http://localhost:3000 --no-paste --no-bind'
+
+  /**
+   * A fake lumo: logs its arguments; whoami answers WHOAMI, login exits
+   * LOGIN_EXIT. Since LUM-1337 setup.sh no longer asks whoami — a login is
+   * added next to any other — so the whoami answer only shows that the
+   * outcome is the same whatever the CLI was logged in to before.
+   */
   const fakeLumo = (whoami: string | null, loginExit = 0) =>
     [
       '#!/bin/sh',
@@ -421,23 +430,20 @@ describe('scripts/self-host/setup.sh', () => {
       withDir(fakeLumo(null))
     )
     expect(status).toBe(0)
-    expect(out).toContain('✓ lumo CLI connected to http://localhost:3000')
-    expect(lumoCalls()).toEqual([
-      'lumo whoami --json',
-      'lumo auth login --url http://localhost:3000 --no-paste',
-    ])
+    expect(out).toContain(
+      '✓ lumo CLI connected to http://localhost:3000 (other logins kept)'
+    )
+    expect(lumoCalls()).toEqual([LOGIN])
   })
 
   it('LUM-1335: --local reconnects a lumo already logged in to this same URL', () => {
     const same = '{"version":1,"apiUrl":"http://localhost:3000/"}'
     const { out } = runWithDocker(['--local'], 0, withDir(fakeLumo(same)))
     expect(out).toContain('✓ lumo CLI connected')
-    expect(lumoCalls()).toContain(
-      'lumo auth login --url http://localhost:3000 --no-paste'
-    )
+    expect(lumoCalls()).toEqual([LOGIN])
   })
 
-  it('LUM-1335: --local never replaces a login to another server', () => {
+  it('LUM-1335 / LUM-1337: --local adds its login next to one for another server, binding no repository', () => {
     const hosted = '{"version":1,"apiUrl":"https://www.uselumo.ai"}'
     const { status, out } = runWithDocker(
       ['--local'],
@@ -446,12 +452,12 @@ describe('scripts/self-host/setup.sh', () => {
     )
     expect(status).toBe(0)
     expect(out).toContain(
-      'The lumo CLI is logged in to https://www.uselumo.ai; left as it is.'
+      '✓ lumo CLI connected to http://localhost:3000 (other logins kept)'
     )
-    expect(out).toContain(
-      '(replaces that login): lumo auth login --url http://localhost:3000'
-    )
-    expect(lumoCalls()).toEqual(['lumo whoami --json'])
+    expect(out).not.toContain('left as it is')
+    expect(out).not.toContain('replaces that login')
+    // --no-bind: the login is added without moving any repository to it.
+    expect(lumoCalls()).toEqual([LOGIN])
   })
 
   it('LUM-1335: a failed connect prints the command and does not fail setup', () => {
@@ -477,27 +483,14 @@ describe('scripts/self-host/setup.sh', () => {
   it('LUM-1335: --local alone prints the next step for your own repo', () => {
     const { out } = runWithDocker(['--local'], 0, withDir(fakeLumo(null)))
     expect(out).toContain('Next, in your own project')
-    expect(out).toContain('cd <your repo> && lumo init')
+    expect(out).toContain(
+      'cd <your repo> && lumo auth use http://localhost:3000 && lumo init'
+    )
   })
 
-  it('LUM-1335: --local --init <repo> runs lumo init there once the CLI is connected', () => {
+  it('LUM-1335 / LUM-1337: --local --init <repo> binds that repo to this Lumo, then runs lumo init there', () => {
     const repo = gitRepo()
-    const { status, out } = runWithDocker(
-      ['--local', '--init', repo],
-      0,
-      withDir(fakeLumo(null))
-    )
-    expect(status).toBe(0)
-    expect(out).toContain(`✓ ${realpathSync(repo)} is set up (lumo init)`)
-    const calls = lumoCalls()
-    expect(calls.indexOf('lumo init')).toBeGreaterThan(
-      calls.indexOf('lumo auth login --url http://localhost:3000 --no-paste')
-    )
-    expect(calls).toContain(`lumo init in ${realpathSync(repo)}`)
-  })
-
-  it('LUM-1335: --init is skipped when the CLI is logged in elsewhere', () => {
-    const repo = gitRepo()
+    // Logged in to the hosted service too: the repo is still set up here.
     const hosted = '{"version":1,"apiUrl":"https://www.uselumo.ai"}'
     const { status, out } = runWithDocker(
       ['--local', '--init', repo],
@@ -505,8 +498,31 @@ describe('scripts/self-host/setup.sh', () => {
       withDir(fakeLumo(hosted))
     )
     expect(status).toBe(0)
+    expect(out).toContain(
+      `✓ ${realpathSync(repo)} uses this Lumo and is set up (lumo init)`
+    )
+    expect(lumoCalls()).toEqual([
+      LOGIN,
+      'lumo auth use http://localhost:3000',
+      'lumo init',
+      `lumo init in ${realpathSync(repo)}`,
+    ])
+  })
+
+  it('LUM-1335 / LUM-1337: --init is skipped when the CLI could not be connected', () => {
+    const repo = gitRepo()
+    const { status, out } = runWithDocker(
+      ['--local', '--init', repo],
+      0,
+      withDir(fakeLumo(null, 1))
+    )
+    expect(status).toBe(0)
     expect(out).toContain('Skipped lumo init in')
-    expect(lumoCalls()).not.toContain('lumo init')
+    expect(out).toContain(
+      `cd ${realpathSync(repo)} && lumo auth use http://localhost:3000 && lumo init`
+    )
+    // Neither bound nor initialised: only the failed login was attempted.
+    expect(lumoCalls()).toEqual([LOGIN])
   })
 
   it('LUM-1335: --init refuses a non-repository before writing .env, and needs --local', () => {

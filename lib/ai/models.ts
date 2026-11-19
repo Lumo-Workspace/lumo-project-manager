@@ -102,6 +102,23 @@ export const HUNT_MODEL = 'anthropic/claude-haiku-4.5'
 export const REWARD_HACK_MODEL = 'anthropic/claude-sonnet-4.6'
 
 /**
+ * Boundary-crossing triage (LUM-945) — after the rule detectors record a
+ * crossing, this model reads the task context and returns P(legit). TypeSafe
+ * Jev is an EVALUATION model (typed question → probability), not a language
+ * model: it is called through the security plugin's evaluation wrapper,
+ * never `gateway(id)`. Chosen on the LUM-945 offline comparison (372
+ * human-labelled production crossings; boolean question).
+ *
+ * Zero data retention since LUM-1349. Catalog 2026-11-18: the alias has two
+ * endpoints — `typesafe-ai` (ZDR) and `digitalocean` (`zdr: none`); the
+ * evaluation wrapper forces ZDR at the wire and MODEL_PROVIDER_PINS below
+ * keeps it on TypeSafe's own API. Probed the same day: with ZDR forced the
+ * gateway skips digitalocean (`zdr_ineligible_model`) and a request
+ * restricted to it is refused (`no_zdr_providers_available`).
+ */
+export const CROSSING_TRIAGE_MODEL = 'typesafe-ai/jev'
+
+/**
  * LUM-988 — models whose gateway routing is pinned to the listed hosts.
  * `lib/ai/zdr-fetch.ts` forces `providerOptions.gateway.only` to this list on
  * every request for the model, at the wire, like ZDR. The gateway's default
@@ -120,6 +137,9 @@ export const MODEL_PROVIDER_PINS: Readonly<Record<string, readonly string[]>> =
     // LUM-1234 — the reward-hack judge reads agent session transcripts; same
     // reason: keep it on Anthropic's own API, not the unannounced cloud hosts.
     [REWARD_HACK_MODEL]: ['anthropic'],
+    // LUM-1349 — Jev's other gateway host (digitalocean) does not offer zero
+    // data retention; triage stays on TypeSafe's own API.
+    [CROSSING_TRIAGE_MODEL]: ['typesafe-ai'],
   }
 
 /**
@@ -224,18 +244,6 @@ export const STRUCTURED_OUTPUT_HOSTS: Readonly<
  * (`zai/glm-5.2` resolves — keep the version dot, do NOT dash-normalise).
  */
 export const POLICY_COMPILER_MODEL = 'zai/glm-5.2'
-
-/**
- * Boundary-crossing triage (LUM-945) — after the rule detectors record a
- * crossing, this model reads the task context and returns P(legit). TypeSafe
- * Jev is an EVALUATION model (typed question → probability), not a language
- * model: it is called through `@/lib/ai/evaluation`, never `gateway(id)`.
- * Chosen on the LUM-945 offline comparison (372 human-labelled production
- * crossings; boolean question). Catalog 2026-10-03: its only endpoint has
- * `zdr: none` / `no_training: all` — the one model in this registry that is
- * not zero-data-retention (user ruling on LUM-945).
- */
-export const CROSSING_TRIAGE_MODEL = 'typesafe-ai/jev'
 
 /**
  * The embedding model id lives in `./embedding` (`EMBEDDING_MODEL`), coupled to
