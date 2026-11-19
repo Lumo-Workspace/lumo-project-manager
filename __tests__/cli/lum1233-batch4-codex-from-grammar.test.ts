@@ -83,6 +83,9 @@ const DEVIATIONS = {
     // LUM-1259: --log uploads to the API and writes its offline queue under .git.
     'security scan':
       'reads git and the working tree; reads server context from the Lumo API and caches it in ~/.lumo (sandboxed: falls back to the cache); --deps sends package names and versions to api.osv.dev (needs network); --full runs osv-scanner from PATH; --log uploads each commit’s result to the Lumo API, queueing it under .git/lumo when it cannot (--offline: queued only)',
+    // LUM-1350: saves a task's raw session records into the -o file.
+    'task run download':
+      'writes local files (saves the raw session records into the -o file) — Codex asks first',
     // LUM-1292: init / uninstall touch only the repo's hooks/rules; doctor now also
     // probes the Lumo API (login + connectivity).
     init: 'writes hook and rules files in this repo',

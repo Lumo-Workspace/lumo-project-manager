@@ -61,7 +61,7 @@ Read with `lumo skill read references/<file>`:
 - [task-deps.md](references/task-deps.md) — `task dep add/confirm/dismiss/remove`
 - [artifacts-figma.md](references/artifacts-figma.md) — `task artifact *`, `task figma *`
 - [outcome.md](references/outcome.md) — `task show --outcome`
-- [usage.md](references/usage.md) — `usage show`, `usage resync`, `task show --lineage/--runs`
+- [usage.md](references/usage.md) — `usage show/resync`, `task show --lineage/--runs`, `task run download`
 - [overview.md](references/overview.md) — `status`, `project show`
 - [priority.md](references/priority.md) — `priority create/list`
 - [milestones.md](references/milestones.md) — `project *`, `milestone` CRUD/archive/add/remove/triage

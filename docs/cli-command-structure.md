@@ -133,26 +133,26 @@ These words never appear as a verb. The right word is in the second column.
 
 Some actions are not any of the eight. They are allowed when they name a real domain action that none of the core verbs describes, and they are listed here; a new one needs a change to this table.
 
-| Verb                                                                  | Where                                                        | Why not a core verb                                                                      |
-| --------------------------------------------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
-| `status`                                                              | `task`, `session`                                            | a computed state check, not a stored object (`task status`, `session status` are frozen) |
-| `attach`                                                              | `session`                                                    | frozen                                                                                   |
-| `decide`                                                              | `task`                                                       | records a ruling in the task's Decisions                                                 |
-| `disposition`                                                         | `crossing`, `finding`, `task testcase`, `milestone testcase` | the human-only ruling handshake                                                          |
-| `explain`                                                             | `crossing`                                                   | the agent's account of a crossing                                                        |
-| `confirm`, `dismiss`                                                  | `task dep`                                                   | rule on a detected candidate edge                                                        |
-| `download`                                                            | `task testcase`, `milestone testcase`                        | writes evidence files to a local directory                                               |
-| `review`                                                              | `pr`                                                         | request or control an AI review (new, batch 3)                                           |
-| `diff`, `patch`, `append`, `move`, `sync`, `import`, `rebuild-source` | `doc`                                                        | live-doc editing and import                                                              |
-| `archive`, `unarchive`, `move`, `reorder`, `triage`                   | `milestone`                                                  | ordering and lifecycle                                                                   |
-| `start`, `close`                                                      | `sprint`                                                     | lifecycle                                                                                |
-| `sync`, `push`, `fold`                                                | `memory`                                                     | local memory store                                                                       |
-| `refresh`                                                             | `task figma`                                                 | re-fetch from Figma                                                                      |
-| `resync`                                                              | `usage`                                                      | correct historical usage                                                                 |
-| `prune`                                                               | `worktree`                                                   | clean up                                                                                 |
-| `scan`                                                                | `security`                                                   | run Lumo's scanners on local changes before a push; reads, but starts work, not a `show` |
-| `login`, `logout`                                                     | `auth`                                                       | authentication                                                                           |
-| hook event names                                                      | `hook`                                                       | frozen; named after the agent's hook events                                              |
+| Verb                                                                  | Where                                                        | Why not a core verb                                                                                           |
+| --------------------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `status`                                                              | `task`, `session`                                            | a computed state check, not a stored object (`task status`, `session status` are frozen)                      |
+| `attach`                                                              | `session`                                                    | frozen                                                                                                        |
+| `decide`                                                              | `task`                                                       | records a ruling in the task's Decisions                                                                      |
+| `disposition`                                                         | `crossing`, `finding`, `task testcase`, `milestone testcase` | the human-only ruling handshake                                                                               |
+| `explain`                                                             | `crossing`                                                   | the agent's account of a crossing                                                                             |
+| `confirm`, `dismiss`                                                  | `task dep`                                                   | rule on a detected candidate edge                                                                             |
+| `download`                                                            | `task testcase`, `milestone testcase`, `task run`            | writes files to a local path: test-case evidence into a directory, a task's raw session records into one file |
+| `review`                                                              | `pr`                                                         | request or control an AI review (new, batch 3)                                                                |
+| `diff`, `patch`, `append`, `move`, `sync`, `import`, `rebuild-source` | `doc`                                                        | live-doc editing and import                                                                                   |
+| `archive`, `unarchive`, `move`, `reorder`, `triage`                   | `milestone`                                                  | ordering and lifecycle                                                                                        |
+| `start`, `close`                                                      | `sprint`                                                     | lifecycle                                                                                                     |
+| `sync`, `push`, `fold`                                                | `memory`                                                     | local memory store                                                                                            |
+| `refresh`                                                             | `task figma`                                                 | re-fetch from Figma                                                                                           |
+| `resync`                                                              | `usage`                                                      | correct historical usage                                                                                      |
+| `prune`                                                               | `worktree`                                                   | clean up                                                                                                      |
+| `scan`                                                                | `security`                                                   | run Lumo's scanners on local changes before a push; reads, but starts work, not a `show`                      |
+| `login`, `logout`                                                     | `auth`                                                       | authentication                                                                                                |
+| hook event names                                                      | `hook`                                                       | frozen; named after the agent's hook events                                                                   |
 
 A domain verb must not mean the same as a core verb (`context` meant `show`; it goes).
 
@@ -287,6 +287,7 @@ A `delete` or `remove` never takes its target from the binding: `task delete` re
 | `-m`  | `--milestone` |                                                                               |
 | `-a`  | `--assignee`  |                                                                               |
 | `-p`  | `--priority`  | `task list -p` (project) is removed; the global `--project` has no short form |
+| `-o`  | `--output`    | the local file a `download` writes (`task run download`)                      |
 
 ---
 

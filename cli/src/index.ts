@@ -109,6 +109,7 @@ import {
   taskDepsRm,
 } from './commands/task-deps'
 import { taskPrShow } from './commands/task-pr-show'
+import { taskRunDownload } from './commands/task-run-download'
 import {
   prReview,
   prShow,
@@ -1639,6 +1640,38 @@ taskPr
     wrap((id, num, opts) =>
       taskPrShow(id as string, num as string, opts as { json?: boolean })
     )
+  )
+
+const taskRun = task
+  .command('run')
+  .description(
+    "A task's raw agent session records (summaries: `lumo task show --runs`)"
+  )
+taskRun
+  .command('download [task]')
+  .codex(
+    writesLocal(
+      'writes local files (saves the raw session records into the -o file) — Codex asks first'
+    )
+  )
+  .description(
+    "Save a task's raw agent session records to a file as JSONL: one line per hook event with its payload as stored. Prints one result line, never a payload. Defaults to the bound task."
+  )
+  .requiredOption(
+    '-o, --output <file>',
+    'File to write (JSONL). Raw records are never printed to stdout'
+  )
+  .option('--force', 'Overwrite <file> when it already exists')
+  .action(
+    wrap(async (taskArg, opts) => {
+      const o = opts as { output?: string; force?: boolean }
+      const resolved = await taskOrBound(
+        taskArg as string | undefined,
+        'lumo task run download <LUM-N> -o <file>'
+      )
+      if (typeof resolved === 'number') return resolved
+      return taskRunDownload(resolved, o)
+    })
   )
 
 const taskArtifact = task
