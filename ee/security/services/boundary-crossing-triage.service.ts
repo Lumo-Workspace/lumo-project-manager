@@ -18,8 +18,8 @@
  *   - keep auto-clearing a category humans keep overturning (auto-pause);
  *   - fail loudly — a model error leaves the row untriaged for the next pass.
  *
- * The model (TypeSafe Jev) has no zero-data-retention endpoint; the user
- * accepted that on LUM-945 and the privacy sources say so.
+ * The model (TypeSafe Jev) runs under zero data retention since LUM-1349:
+ * the evaluation wrapper forces it and pins the model to TypeSafe's own API.
  */
 import { boundaryCrossingRepository } from '@/lib/repositories/boundary-crossing.repository'
 import { activityRepository } from '@/lib/repositories/activity.repository'

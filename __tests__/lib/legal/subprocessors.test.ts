@@ -67,7 +67,7 @@ function manifestModelRows(): { model: string; hosts: string[] }[] {
     hosts: [cells[2] ?? '', cells[3] ?? '']
       .flatMap(c => c.split(/→|,|、/))
       .map(s => s.trim())
-      .filter(s => /^[a-z0-9]+$/.test(s)),
+      .filter(s => /^[a-z0-9]+(-[a-z0-9]+)*$/.test(s)),
   }))
 }
 

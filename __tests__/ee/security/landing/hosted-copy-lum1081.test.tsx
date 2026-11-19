@@ -109,7 +109,7 @@ describe('hosted copy is unchanged by the snapshot scrub LUM-1081', () => {
       'security.subprocessors.ai.intro',
     ])
       expect(container).toHaveTextContent(en[key]!)
-    expect(container).toHaveTextContent('boundary-crossing triage')
+    expect(container).toHaveTextContent('Boundary-crossing triage')
     // LUM-860 (moved from the core /security test): uninstall and repository
     // removal both clear scan code.
     expect(en['security.retention.uninstall']).toMatch(

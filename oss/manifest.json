@@ -698,20 +698,6 @@
     {
       "file": "components/landing/home/faq.tsx",
       "type": "replace",
-      "pattern": "zero data retention enforced on the request itself for all but boundary-crossing triage, whose host does not train on your data but does not offer zero data retention\\.",
-      "replacement": "zero data retention enforced on the request itself.",
-      "reason": "LUM-1035 (2026-10-11 ruling ④): the security plugin is not in the snapshot (MIT open-core, LUM-1058); the private repo keeps this landing copy for the hosted service: the privacy answer's crossing-triage exception (triage is plugin code, LUM-1058 RFC crossing-ai); without the plugin every AI request carries ZDR"
-    },
-    {
-      "file": "components/landing/home/faq.tsx",
-      "type": "replace",
-      "pattern": "^//     the one exception is boundary-crossing triage[^\\n]*\\n//     via lib/ai/evaluation\\.ts[^\\n]*\\n//     which the answer must name \\(LUM-871\\);\\n",
-      "replacement": "",
-      "reason": "LUM-1035 (2026-10-11 ruling ④): the security plugin is not in the snapshot (MIT open-core, LUM-1058); the private repo keeps this landing copy for the hosted service: the comment explaining the crossing-triage exception"
-    },
-    {
-      "file": "components/landing/home/faq.tsx",
-      "type": "replace",
       "pattern": "agent activity, PR/scan records and several child tables",
       "replacement": "agent activity and several child tables",
       "reason": "LUM-1035 (2026-10-11 ruling ④): the security plugin is not in the snapshot (MIT open-core, LUM-1058); the private repo keeps this landing copy for the hosted service"

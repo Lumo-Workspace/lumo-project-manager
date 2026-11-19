@@ -1,6 +1,6 @@
 # Lumo Privacy Policy
 
-Last updated: 2026-10-28 · Draft for legal review (LUM-857)
+Last updated: 2026-11-19 · Draft for legal review (LUM-857)
 
 This policy explains what personal data [Lumo legal entity], [registered address] ("Lumo", "we", "us") collects when you use the Lumo website, web application, command-line tool (CLI) and integrations (together, the "Service"), why we collect it, how long we keep it, who we share it with, and the rights you have.
 
@@ -43,9 +43,9 @@ We do not use your workspace content, agent hook events or code to train AI mode
 
 ### AI processing
 
-When an AI feature runs, the relevant text (which may include code) is sent to a large language model through the Vercel AI Gateway. Except for boundary-crossing triage (below), every request is sent with zero data retention enforced: it is only routed to model hosts that have agreed not to store the data or train on it, and it fails rather than going to a host that would. Please note:
+When an AI feature runs, the relevant text (which may include code) is sent to a large language model through the Vercel AI Gateway. Every request is sent with zero data retention enforced: it is only routed to model hosts that have agreed not to store the data or train on it, and it fails rather than going to a host that would. Please note:
 
-- Boundary-crossing triage is the one exception. When Lumo's rule detectors flag an action an AI agent took, Lumo asks TypeSafe's Jev model, through the Vercel AI Gateway, whether the action was a legitimate part of the task. For this it sends the flagged command or file path (with detected credentials redacted), the project rule that fired, the task's title and description, and the agent's own explanation. Jev's only host, DigitalOcean, has committed not to train on the data but does not offer zero data retention. Turning off AI review in workspace settings stops this triage.
+- Boundary-crossing triage: when Lumo's rule detectors flag an action an AI agent took, Lumo asks TypeSafe's Jev model, through the Vercel AI Gateway, whether the action was a legitimate part of the task. For this it sends the flagged command or file path (with detected credentials redacted), the project rule that fired, the task's title and description, and the agent's own explanation. These requests are sent only to TypeSafe's own API, under zero data retention. Turning off AI review in workspace settings stops this triage.
 - OpenAI's zero-data-retention terms allow limited retention for abuse monitoring ("safety retention").
 - Zero data retention is each model host's own policy, and a host can exclude specific models or features from it; the Vercel AI Gateway does not fail such requests. Lumo sends only text and does not use the features our hosts list as exclusions (such as stored conversations, file or image inputs, hosted tools or batch processing). Hosts may still cache parts of a prompt to speed up repeated requests; OpenAI keeps this cache encrypted for up to 24 hours.
 - Open-weight models (such as the DeepSeek and GLM families) are run by third-party hosting providers listed on our subprocessor page, not by the model authors.

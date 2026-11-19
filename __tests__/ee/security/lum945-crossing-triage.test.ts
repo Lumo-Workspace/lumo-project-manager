@@ -22,6 +22,7 @@ import {
   evaluateBoolean,
   readBooleanAnswer,
 } from '@/ee/security/ai/evaluation'
+import { CROSSING_TRIAGE_MODEL, MODEL_PROVIDER_PINS } from '@/lib/ai/models'
 
 // Assembled at runtime so this file carries no key-shaped literal.
 const FAKE_AWS_KEY = ['AKIA', 'IOSFODNN7', 'EXAMPLE'].join('')
@@ -174,7 +175,30 @@ describe('LUM-945 evaluation wrapper', () => {
           criteria: { true: 'T', false: 'F' },
         },
       },
+      // LUM-1349 — forced at the wire: zero data retention, and the triage
+      // model stays on TypeSafe's own API (MODEL_PROVIDER_PINS).
+      providerOptions: {
+        gateway: { zeroDataRetention: true, only: ['typesafe-ai'] },
+      },
     })
+  })
+
+  it('LUM-1349 forces zero data retention on every evaluation request, pinned or not', async () => {
+    const f = fakeFetch(200, {
+      answers: { answer: { type: 'boolean', probability: 0.5 } },
+    })
+    await evaluateBoolean(
+      { ...call, model: 'some-vendor/unpinned-evaluator' },
+      f as unknown as typeof fetch
+    )
+    const body = JSON.parse(f.mock.calls[0]![1]!.body as string) as {
+      providerOptions: { gateway: Record<string, unknown> }
+    }
+    expect(body.providerOptions.gateway).toEqual({ zeroDataRetention: true })
+  })
+
+  it('LUM-1349 pins the triage model to the one host that offers zero data retention', () => {
+    expect(MODEL_PROVIDER_PINS[CROSSING_TRIAGE_MODEL]).toEqual(['typesafe-ai'])
   })
 
   it('throws an EvaluationError on HTTP errors, non-JSON and missing answers', async () => {

@@ -103,7 +103,8 @@ async function main() {
     (e): e is [string, string] =>
       typeof e[1] === 'string' &&
       e[1].includes('/') &&
-      // LUM-945: an evaluation model, called outside the ZDR layer on purpose.
+      // LUM-945 / LUM-1349: an evaluation model — not callable through
+      // generateText. Its wrapper (ee/security/ai/evaluation.ts) forces ZDR.
       e[0] !== 'CROSSING_TRIAGE_MODEL'
   )
   const rows: ProbeRow[] = []

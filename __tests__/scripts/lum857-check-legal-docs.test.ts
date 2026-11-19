@@ -5,7 +5,9 @@ import {
   AI_HOST_LOCATION,
   checkAiHostLocations,
   checkRequirements,
+  BOUNDARY_TRIAGE_ZDR,
   checkStaleRegionClaims,
+  checkStaleTriageClaims,
   checkSubprocessors,
   registeredDocId,
   tableCells,
@@ -108,6 +110,32 @@ describe('LUM-857 legal doc checks', () => {
     expect(checkStaleRegionClaims('AI requests are routed globally.')).toEqual(
       []
     )
+  })
+
+  it('LUM-1349 flags the old triage exception wording and accepts the ZDR wording', () => {
+    expect(
+      checkStaleTriageClaims(
+        'Except for boundary-crossing triage (below), every request is ZDR. Boundary-crossing triage is the one exception. Its host does not offer zero data retention.'
+      )
+    ).toEqual([
+      'stale triage claim: triage as a ZDR exception',
+      'stale triage claim: Jev host without ZDR',
+    ])
+    const current =
+      "Boundary-crossing triage: these requests are sent only to TypeSafe's own API, under zero data retention."
+    expect(checkStaleTriageClaims(current)).toEqual([])
+    expect(BOUNDARY_TRIAGE_ZDR.test(current)).toBe(true)
+    expect(
+      BOUNDARY_TRIAGE_ZDR.test(
+        "Boundary-crossing triage sends the command to TypeSafe's Jev model, which is served only by TypeSafe's own API under zero data retention."
+      )
+    ).toBe(true)
+    // The host and the retention term must be on the triage line itself.
+    expect(
+      BOUNDARY_TRIAGE_ZDR.test(
+        "Boundary-crossing triage uses Jev.\nOther requests go to TypeSafe's own API, under zero data retention."
+      )
+    ).toBe(false)
   })
 
   it('reports each unmet requirement by label', () => {
