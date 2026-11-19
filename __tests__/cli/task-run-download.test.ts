@@ -319,6 +319,21 @@ describe('taskRunDownload', () => {
     expect(stdout()).toContain(`, ${readFileSync(out).length} bytes;`)
   })
 
+  it('exits 1 and writes nothing when the response has another shape', async () => {
+    const noItems = {
+      ...TIMELINE,
+      runs: [{ ...TIMELINE.runs[2], items: null }],
+    }
+    const fetchSpy = jest.spyOn(global, 'fetch')
+    for (const body of [{}, { runs: 'x' }, noItems, { runs: [null] }]) {
+      fetchSpy.mockResolvedValue(ok(body))
+      expect(await taskRunDownload('LUM-9', { output: out })).toBe(1)
+      expect(existsSync(out)).toBe(false)
+    }
+    expect(stderr()).toContain('unexpected shape')
+    expect(logSpy).not.toHaveBeenCalled()
+  })
+
   it('uses the same marker keys as the server', () => {
     expect(CLI_PRUNED_KEY).toBe(PRUNED_PAYLOAD_KEY)
     expect(CLI_REDACTED_FIELD).toBe(REDACTED_FIELD)

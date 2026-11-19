@@ -101,7 +101,16 @@ export async function taskRunDownload(
     'task run download'
   )
   if (!r.ok || !r.data) return 1
-  const runs = r.data.runs ?? []
+  // Checked before the file is opened: a response of another shape is not a
+  // write error and must not leave a file behind.
+  const runs = r.data.runs
+  if (!Array.isArray(runs) || runs.some(run => !Array.isArray(run?.items))) {
+    console.error(
+      'Error: the server returned session records in an unexpected shape'
+    )
+    console.error(hint(`update the CLI, then run the command again`))
+    return 1
+  }
 
   // Only a file this run creates is removed when the export fails part-way.
   const replacing = !!opts.force && existsSync(output)
