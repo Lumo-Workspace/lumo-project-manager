@@ -1,4 +1,11 @@
-import { closeSync, existsSync, openSync, rmSync, writeSync } from 'fs'
+import {
+  closeSync,
+  existsSync,
+  fchmodSync,
+  openSync,
+  rmSync,
+  writeFileSync,
+} from 'fs'
 import { EXIT_USAGE } from '../lib/exit-codes'
 import { cmd, hint } from '../lib/feedback'
 import { sanitizeField } from '../lib/sanitize'
@@ -100,8 +107,8 @@ export async function taskRunDownload(
   const replacing = !!opts.force && existsSync(output)
   let fd: number
   try {
-    // 0600: the records hold prompts and tool output, so a new file is
-    // readable by its owner only. An overwritten file keeps its own mode.
+    // 0600: the records hold prompts and tool output, so the file is readable
+    // by its owner only.
     fd = openSync(output, opts.force ? 'w' : 'wx', 0o600)
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code
@@ -111,6 +118,16 @@ export async function taskRunDownload(
         : `Error: could not write ${sanitizeField(output)} (${code ?? String(err)})`
     )
     return 1
+  }
+
+  // The mode given to open only applies to a new file, so tighten one that is
+  // being overwritten. Best effort: a device such as /dev/null refuses it.
+  if (replacing) {
+    try {
+      fchmodSync(fd, 0o600)
+    } catch {
+      // keep the file's own mode
+    }
   }
 
   let events = 0
@@ -126,8 +143,7 @@ export async function taskRunDownload(
         if (item.kind !== 'hook') continue
         if (hasObjectKey(item.payload, PRUNED_PAYLOAD_KEY)) pruned++
         else if (hasObjectKey(item.payload, REDACTED_FIELD)) stripped++
-        bytes += writeSync(
-          fd,
+        const line =
           JSON.stringify({
             task,
             runNumber: run.runNumber,
@@ -139,7 +155,10 @@ export async function taskRunDownload(
             createdAt: item.createdAt,
             payload: item.payload,
           }) + '\n'
-        )
+        // writeFileSync on a descriptor keeps writing until the whole line is
+        // out; a bare writeSync may stop short.
+        writeFileSync(fd, line)
+        bytes += Buffer.byteLength(line)
         inRun++
       }
       events += inRun
@@ -148,20 +167,33 @@ export async function taskRunDownload(
   } catch (err) {
     writeError = err
   } finally {
-    closeSync(fd)
+    try {
+      closeSync(fd)
+    } catch (err) {
+      // A failed close can lose buffered data, so it fails the export too.
+      writeError ??= err
+    }
   }
   if (writeError) {
     // A partial file would pass for a complete export, so do not leave one.
-    if (!replacing) rmSync(output, { force: true })
+    let removed = false
+    if (!replacing) {
+      try {
+        rmSync(output, { force: true })
+        removed = true
+      } catch {
+        // reported below as an incomplete file
+      }
+    }
     const code = (writeError as NodeJS.ErrnoException).code
     console.error(
       `Error: could not write ${sanitizeField(output)} (${code ?? String(writeError)})`
     )
     console.error(
       hint(
-        replacing
-          ? 'the file is incomplete; run the command again'
-          : 'nothing was saved; run the command again'
+        removed
+          ? 'nothing was saved; run the command again'
+          : 'the file is incomplete; run the command again'
       )
     )
     return 1

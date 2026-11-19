@@ -8,6 +8,7 @@ jest.mock('@/cli/src/lib/config', () => ({
 }))
 
 import fs, {
+  chmodSync,
   existsSync,
   mkdtempSync,
   readFileSync,
@@ -252,15 +253,15 @@ describe('taskRunDownload', () => {
 
   it('exits 1 and removes the file it created when a write fails part-way', async () => {
     jest.spyOn(global, 'fetch').mockResolvedValue(ok(TIMELINE))
-    const realWrite = fs.writeSync
+    const realWrite = fs.writeFileSync
     let calls = 0
-    jest.spyOn(fs, 'writeSync').mockImplementation(((
-      ...args: Parameters<typeof fs.writeSync>
+    jest.spyOn(fs, 'writeFileSync').mockImplementation(((
+      ...args: Parameters<typeof fs.writeFileSync>
     ) => {
       if (++calls === 3)
         throw Object.assign(new Error('no space'), { code: 'ENOSPC' })
       return realWrite(...args)
-    }) as typeof fs.writeSync)
+    }) as typeof fs.writeFileSync)
     const code = await taskRunDownload('LUM-9', { output: out })
     expect(code).toBe(1)
     expect(existsSync(out)).toBe(false)
@@ -272,7 +273,7 @@ describe('taskRunDownload', () => {
   it('keeps an overwritten file and says it is incomplete when a --force write fails', async () => {
     writeFileSync(out, 'old')
     jest.spyOn(global, 'fetch').mockResolvedValue(ok(TIMELINE))
-    jest.spyOn(fs, 'writeSync').mockImplementation(() => {
+    jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {
       throw Object.assign(new Error('io'), { code: 'EIO' })
     })
     const code = await taskRunDownload('LUM-9', { output: out, force: true })
@@ -280,6 +281,42 @@ describe('taskRunDownload', () => {
     expect(existsSync(out)).toBe(true)
     expect(stderr()).toContain('the file is incomplete')
     expect(logSpy).not.toHaveBeenCalled()
+  })
+
+  it('still exits 1 with its own error when removing the partial file fails', async () => {
+    jest.spyOn(global, 'fetch').mockResolvedValue(ok(TIMELINE))
+    jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {
+      throw Object.assign(new Error('io'), { code: 'EIO' })
+    })
+    const rmSpy = jest.spyOn(fs, 'rmSync').mockImplementation(() => {
+      throw Object.assign(new Error('busy'), { code: 'EBUSY' })
+    })
+    const code = await taskRunDownload('LUM-9', { output: out })
+    rmSpy.mockRestore()
+    expect(code).toBe(1)
+    expect(stderr()).toContain('EIO')
+    expect(stderr()).toContain('the file is incomplete')
+    expect(logSpy).not.toHaveBeenCalled()
+  })
+
+  it('tightens an overwritten file to owner-only', async () => {
+    writeFileSync(out, 'old', { mode: 0o644 })
+    chmodSync(out, 0o644)
+    jest.spyOn(global, 'fetch').mockResolvedValue(ok(TIMELINE))
+    await taskRunDownload('LUM-9', { output: out, force: true })
+    expect(statSync(out).mode & 0o777).toBe(0o600)
+  })
+
+  it('counts bytes as written, multi-byte characters included', async () => {
+    const run = {
+      ...TIMELINE.runs[2]!,
+      items: [hook('u1', 'USER_PROMPT_SUBMIT', { prompt: '会话记录 ✓' })],
+    }
+    jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValue(ok({ ...TIMELINE, runs: [run] }))
+    await taskRunDownload('LUM-9', { output: out })
+    expect(stdout()).toContain(`, ${readFileSync(out).length} bytes;`)
   })
 
   it('uses the same marker keys as the server', () => {
