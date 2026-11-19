@@ -33,6 +33,10 @@ function slugify(s: string): string {
   )
 }
 
+/** A line break and the whitespace around it. Built from escapes so the
+ *  separators stay visible in source. */
+const LINE_BREAKS = new RegExp('\\s*[\\n\\u2028\\u2029]\\s*', 'g')
+
 /** Headline length kept in the resident index line, markers included. */
 const INDEX_HEADLINE_MAX = 100
 /** Floor for the headline text when a marker takes most of that length. */
@@ -53,7 +57,9 @@ export function guardSyncHeadline(headline: string): {
   marker: string
 } {
   const oneLine = sanitizeField(headline)
-    .replace(/\s*\n\s*/g, ' ')
+    // sanitizeField already dropped \r and U+0085; U+2028 / U+2029 are the
+    // line breaks it keeps.
+    .replace(LINE_BREAKS, ' ')
     .trim()
   const guarded = guardPromptLine(oneLine)
   return {

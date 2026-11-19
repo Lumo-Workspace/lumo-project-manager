@@ -189,6 +189,12 @@ describe('guardSyncHeadline', () => {
   it('collapses line breaks and defangs comment delimiters', () => {
     expect(guardSyncHeadline('a\n  b <!-- c -->').text).toBe('a b (!-- c --)')
   })
+
+  it('treats every line-break character as a break, not only \\n', () => {
+    expect(guardSyncHeadline('a\r\nb\u2028c\u2029d\u0085e\rf').text).toBe(
+      'a b c def'
+    )
+  })
 })
 
 describe('code-anchor staleness check on a synced body', () => {
