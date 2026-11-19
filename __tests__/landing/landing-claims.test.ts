@@ -164,11 +164,9 @@ describe('FAQ privacy claims LUM-853', () => {
     expect(readRoot('lib/ai/zdr-fetch.ts')).toMatch(
       /ZDR_GATEWAY_OPTIONS = \{ zeroDataRetention: true \}/
     )
-    // LUM-871's exception (boundary-crossing triage runs outside the ZDR
-    // layer) is plugin copy: the FAQ names it only while the security plugin
-    // ships, so it is asserted in
-    // __tests__/ee/security/landing/landing-claims.test.ts (LUM-1035). The
-    // open-source snapshot drops that clause (oss/manifest.json transform).
+    // LUM-1349 removed LUM-871's exception: boundary-crossing triage (plugin
+    // code) now goes through the ZDR layer too, which
+    // __tests__/ee/security/landing/landing-claims.test.ts asserts.
     expect(answer).toMatch(/zero data retention enforced on the request itself/)
     // Team wording rule for processing location.
     expect(answer).toMatch(/routed globally/)

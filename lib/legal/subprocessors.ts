@@ -25,7 +25,7 @@
 export const SECURITY_CONTACT_EMAIL = 'hello@uselumo.ai'
 
 /** Date the /security page and this list were last reviewed (ISO). */
-export const SECURITY_PAGE_UPDATED = '2026-10-12'
+export const SECURITY_PAGE_UPDATED = '2026-11-18'
 
 /**
  * `us`: United States. `globalEdge`: served from the edge, nothing retained.
@@ -180,6 +180,14 @@ export const AI_HOST_SUBPROCESSORS: readonly AiHostSubprocessor[] = [
   { gatewaySlug: 'parasail', entity: 'Parasail', location: 'globalRouting' },
   { gatewaySlug: 'runware', entity: 'Runware', location: 'globalRouting' },
   { gatewaySlug: 'wafer', entity: 'Wafer', location: 'globalRouting' },
+  {
+    // LUM-1349: boundary-crossing triage (CROSSING_TRIAGE_MODEL) is pinned to
+    // TypeSafe's own API by MODEL_PROVIDER_PINS, the one host of the Jev
+    // model that offers zero data retention.
+    gatewaySlug: 'typesafe-ai',
+    entity: 'TypeSafe AI',
+    location: 'globalRouting',
+  },
 ]
 
 /** Services that only receive data once a workspace member connects them. */

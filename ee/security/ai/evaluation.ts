@@ -8,12 +8,15 @@
  * `{ state, questions }`. Auth matches `@/lib/ai/gateway`: AI_GATEWAY_API_KEY
  * locally, the Vercel OIDC token in deployments.
  *
- * NOT zero data retention. `@/lib/ai/gateway` forces ZDR on every inference
- * request; the evaluation models in the catalog have no ZDR endpoint, so a
- * forced ZDR flag would be refused. Callers decide what they may send.
+ * Zero data retention is forced at the wire (LUM-1349), by the same
+ * `createZdrFetch` that guards `@/lib/ai/gateway`: every request carries
+ * `providerOptions.gateway.zeroDataRetention: true`, and a model pinned in
+ * `MODEL_PROVIDER_PINS` is restricted to its listed hosts. The gateway then
+ * refuses the request rather than sending it to a host that retains data.
  */
 
 import { resolveAiRoute } from '@/lib/ai/routing'
+import { createZdrFetch } from '@/lib/ai/zdr-fetch'
 
 const GATEWAY_EVALUATION_URL =
   'https://ai-gateway.vercel.sh/v4/ai/evaluation-model'
@@ -85,7 +88,7 @@ export async function evaluateBoolean(
   }
   let res: Response
   try {
-    res = await fetchImpl(GATEWAY_EVALUATION_URL, {
+    res = await createZdrFetch(fetchImpl)(GATEWAY_EVALUATION_URL, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',

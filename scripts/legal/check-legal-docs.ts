@@ -52,6 +52,7 @@ export const GATEWAY_HOST_NAMES: Record<string, string> = {
   parasail: 'Parasail',
   runware: 'Runware',
   wafer: 'Wafer',
+  'typesafe-ai': 'TypeSafe',
 }
 
 /** Services the production runtime sends data to (see LUM-857 PR). */
@@ -122,7 +123,7 @@ export function zdrCandidateHosts(manifest: string): string[] {
     const cell = tableCells(line)[col] ?? ''
     for (const part of cell.split(/→|,|、/)) {
       const slug = part.trim()
-      if (/^[a-z0-9]+$/.test(slug)) hosts.add(slug)
+      if (/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) hosts.add(slug)
     }
   }
   return [...hosts].sort()
@@ -200,6 +201,30 @@ export function checkStaleRegionClaims(doc: string): string[] {
 export const ZDR_EXCLUSION_CAVEAT =
   /exclude specific models or features from it[\s\S]*?(does not fail|without the gateway failing)[\s\S]*?cache parts of a prompt/
 
+/**
+ * LUM-1349 — boundary-crossing triage (LUM-945) runs under zero data
+ * retention, on TypeSafe's own API only. Every legal source must name that
+ * host and the retention term, and none may keep the old exception wording.
+ */
+export const BOUNDARY_TRIAGE_ZDR =
+  /[Bb]oundary-crossing triage[^\n]*TypeSafe's own API,? under zero data retention/
+
+/** Wording from before LUM-1349, when triage was the one non-ZDR request. */
+export const STALE_TRIAGE_CLAIMS: Requirement[] = [
+  [
+    'triage as a ZDR exception',
+    /one exception|except(?: for)? boundary-crossing triage/i,
+  ],
+  ['Jev host without ZDR', /does not offer zero data retention/i],
+]
+
+/** Pre-LUM-1349 triage wording, found anywhere in the doc. */
+export function checkStaleTriageClaims(doc: string): string[] {
+  return STALE_TRIAGE_CLAIMS.filter(([, re]) => re.test(doc)).map(
+    ([label]) => `stale triage claim: ${label}`
+  )
+}
+
 export const PRIVACY_REQUIREMENTS: Requirement[] = [
   ['account data category', /Account data/],
   ['workspace content category', /Workspace content/],
@@ -216,10 +241,7 @@ export const PRIVACY_REQUIREMENTS: Requirement[] = [
   ['SCC basis for transfers', /Standard Contractual Clauses/],
   ['no-training statement', /do not use .* to train/],
   ['OpenAI safety retention caveat', /safety retention/],
-  [
-    'boundary-crossing triage ZDR exception',
-    /Boundary-crossing triage is the one exception/,
-  ],
+  ['boundary-crossing triage host and retention', BOUNDARY_TRIAGE_ZDR],
   ['provider ZDR exclusion caveat', ZDR_EXCLUSION_CAVEAT],
   ['AI global routing', /routed globally/],
   ['AI region caveat', /cannot currently commit to a location/],
@@ -254,19 +276,17 @@ export const DPA_REQUIREMENTS: Requirement[] = [
   ['no-training commitment', /train artificial intelligence models/],
   ['AI global routing', /routed globally/],
   ['AI no location commitment', /does not commit to a processing location/],
-  ['boundary-crossing triage ZDR exception', /Boundary-crossing triage sends/],
+  ['boundary-crossing triage host and retention', BOUNDARY_TRIAGE_ZDR],
   ['provider ZDR exclusion caveat', ZDR_EXCLUSION_CAVEAT],
 ]
 
 /**
- * Facts the subprocessor list must state beyond its tables (LUM-945 triage
- * exception, LUM-871 provider-side ZDR exclusions).
+ * Facts the subprocessor list must state beyond its tables (LUM-945 triage,
+ * on TypeSafe's own API under ZDR since LUM-1349; LUM-871 provider-side ZDR
+ * exclusions).
  */
 export const SUBPROCESSOR_REQUIREMENTS: Requirement[] = [
-  [
-    'boundary-crossing triage ZDR exception',
-    /Boundary-crossing triage is the one exception/,
-  ],
+  ['boundary-crossing triage host and retention', BOUNDARY_TRIAGE_ZDR],
   ['provider ZDR exclusion caveat', ZDR_EXCLUSION_CAVEAT],
   [
     'Vercel ZDR documentation link',
@@ -336,6 +356,7 @@ function run(mode: string): string[] {
         ...checkSubprocessors(doc, read(MANIFEST)),
         ...checkRequirements(doc, SUBPROCESSOR_REQUIREMENTS),
         ...checkStaleRegionClaims(doc),
+        ...checkStaleTriageClaims(doc),
       ]
     }
     case 'privacy': {
@@ -343,6 +364,7 @@ function run(mode: string): string[] {
       return [
         ...checkRequirements(doc, PRIVACY_REQUIREMENTS),
         ...checkStaleRegionClaims(doc),
+        ...checkStaleTriageClaims(doc),
       ]
     }
     case 'dpa': {
@@ -350,6 +372,7 @@ function run(mode: string): string[] {
       return [
         ...checkRequirements(doc, DPA_REQUIREMENTS),
         ...checkStaleRegionClaims(doc),
+        ...checkStaleTriageClaims(doc),
       ]
     }
     case 'published':

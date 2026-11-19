@@ -63,7 +63,11 @@ function manifestLandings(): Map<string, string> {
   return out
 }
 
-/** Runtime model constants the probe must cover (Jev is skipped by design). */
+/**
+ * Runtime model constants the probe must cover. Jev is an evaluation model the
+ * chat/embedding probe cannot call; its ZDR is forced by its own wrapper
+ * (LUM-1349, `__tests__/ee/security/lum945-crossing-triage.test.ts`).
+ */
 function probedConstants(): string[] {
   return [
     ...Object.entries(models)

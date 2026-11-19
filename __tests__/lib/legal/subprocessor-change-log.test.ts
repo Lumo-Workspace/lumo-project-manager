@@ -49,10 +49,10 @@ const NEON_EU: InfrastructureSubprocessor = {
 
 function addHost(over: Partial<SubprocessorChange> = {}): SubprocessorChange {
   return {
-    id: '2026-11-01-example-host',
+    id: '2027-11-01-example-host',
     kind: 'added',
-    announcedAt: '2026-11-01',
-    effectiveAt: '2026-12-01',
+    announcedAt: '2027-11-01',
+    effectiveAt: '2027-12-01',
     summary: 'Example Host, Inc. joins the AI model hosts.',
     after: { list: 'aiHost', entry: NEW_HOST },
     ...over,
@@ -101,10 +101,10 @@ describe('subprocessor change log guard (LUM-919)', () => {
   it('fails for an addition with under 30 days notice that is not urgent', () => {
     expect(
       checkSubprocessorChangeLog(
-        withHost([addHost({ effectiveAt: '2026-11-30' })])
+        withHost([addHost({ effectiveAt: '2027-11-30' })])
       )
     ).toEqual([
-      '2026-11-01-example-host: 29 days of notice, DPA 7.2 needs 30 (or mark it urgent with a reason)',
+      '2027-11-01-example-host: 29 days of notice, DPA 7.2 needs 30 (or mark it urgent with a reason)',
     ])
   })
 
@@ -114,7 +114,7 @@ describe('subprocessor change log guard (LUM-919)', () => {
       checkSubprocessorChangeLog(
         withHost([
           addHost({
-            effectiveAt: '2026-11-02',
+            effectiveAt: '2027-11-02',
             urgent: { reason: 'Current host lost its ZDR agreement.' },
           }),
         ])
@@ -126,12 +126,12 @@ describe('subprocessor change log guard (LUM-919)', () => {
     expect(
       checkSubprocessorChangeLog(
         withHost([
-          addHost({ effectiveAt: '2026-11-02', urgent: { reason: ' ' } }),
+          addHost({ effectiveAt: '2027-11-02', urgent: { reason: ' ' } }),
         ])
       )
     ).toEqual([
-      '2026-11-01-example-host: urgent without a reason',
-      '2026-11-01-example-host: 1 days of notice, DPA 7.2 needs 30 (or mark it urgent with a reason)',
+      '2027-11-01-example-host: urgent without a reason',
+      '2027-11-01-example-host: 1 days of notice, DPA 7.2 needs 30 (or mark it urgent with a reason)',
     ])
   })
 
@@ -143,10 +143,10 @@ describe('subprocessor change log guard (LUM-919)', () => {
         changes: [
           ...SUBPROCESSOR_CHANGES,
           {
-            id: '2026-11-01-wafer-removed',
+            id: '2027-11-01-wafer-removed',
             kind: 'removed',
-            announcedAt: '2026-11-01',
-            effectiveAt: '2026-11-01',
+            announcedAt: '2027-11-01',
+            effectiveAt: '2027-11-01',
             summary: 'Wafer no longer hosts Lumo models.',
             before: { list: 'aiHost', entry: wafer },
           },
@@ -156,10 +156,10 @@ describe('subprocessor change log guard (LUM-919)', () => {
     ).toEqual([])
 
     const moved: SubprocessorChange = {
-      id: '2026-11-01-neon-eu',
+      id: '2027-11-01-neon-eu',
       kind: 'changed',
-      announcedAt: '2026-11-01',
-      effectiveAt: '2026-12-15',
+      announcedAt: '2027-11-01',
+      effectiveAt: '2027-12-15',
       summary: 'Neon moves to AWS eu-central-1.',
       before: { list: 'infrastructure', entry: NEON_EU },
       after: { list: 'infrastructure', entry: NEON_EU },
@@ -172,24 +172,24 @@ describe('subprocessor change log guard (LUM-919)', () => {
       ),
     })
     expect(problems).toEqual([
-      '2026-11-01-neon-eu: `before` does not match infrastructure:neon as logged',
+      '2027-11-01-neon-eu: `before` does not match infrastructure:neon as logged',
     ])
   })
 
   it('names malformed records: id, dates, shape, order, duplicates', () => {
     const bad: SubprocessorChange[] = [
-      addHost({ id: 'Example', announcedAt: '2026-12-02' }),
-      addHost({ id: '2026-11-01-example-host', before: addHost().after! }),
-      addHost({ id: '2026-11-01-example-host', effectiveAt: '2026-10-01' }),
+      addHost({ id: 'Example', announcedAt: '2027-12-02' }),
+      addHost({ id: '2027-11-01-example-host', before: addHost().after! }),
+      addHost({ id: '2027-11-01-example-host', effectiveAt: '2026-10-01' }),
     ]
     const problems = checkSubprocessorChangeLog(withHost(bad))
     expect(problems).toEqual(
       expect.arrayContaining([
         'Example: id is not YYYY-MM-DD-<slug>',
-        '2026-11-01-example-host: out of order (the log is oldest first)',
-        '2026-11-01-example-host: added needs `after` only',
-        '2026-11-01-example-host: duplicate id',
-        '2026-11-01-example-host: takes effect before it is announced',
+        '2027-11-01-example-host: out of order (the log is oldest first)',
+        '2027-11-01-example-host: added needs `after` only',
+        '2027-11-01-example-host: duplicate id',
+        '2027-11-01-example-host: takes effect before it is announced',
       ])
     )
   })
@@ -207,13 +207,13 @@ describe('subprocessor change log guard (LUM-919)', () => {
   })
 
   it('date helpers count UTC calendar days', () => {
-    expect(utcDayStart('2026-11-01')).toBe(Date.UTC(2026, 10, 1))
+    expect(utcDayStart('2027-11-01')).toBe(Date.UTC(2027, 10, 1))
     expect(Number.isNaN(utcDayStart('1 Nov 2026'))).toBe(true)
     expect(noticeDays(addHost())).toBe(30)
-    expect(isPending(addHost(), new Date('2026-11-30T23:59:59Z'))).toBe(true)
-    expect(isPending(addHost(), new Date('2026-12-01T00:00:00Z'))).toBe(false)
+    expect(isPending(addHost(), new Date('2027-11-30T23:59:59Z'))).toBe(true)
+    expect(isPending(addHost(), new Date('2027-12-01T00:00:00Z'))).toBe(false)
     expect(
-      daysUntilEffective(addHost(), new Date('2026-11-30T12:00:00Z'))
+      daysUntilEffective(addHost(), new Date('2027-11-30T12:00:00Z'))
     ).toBe(0.5)
     expect(isUrgent(addHost())).toBe(false)
     expect(isUrgent(addHost({ urgent: { reason: 'Outage' } }))).toBe(true)
@@ -231,39 +231,39 @@ describe('/security subprocessor view (LUM-919)', () => {
       now: new Date(now),
     })
   const move: SubprocessorChange = {
-    id: '2026-11-01-neon-eu',
+    id: '2027-11-01-neon-eu',
     kind: 'changed',
-    announcedAt: '2026-11-01',
-    effectiveAt: '2026-12-15',
+    announcedAt: '2027-11-01',
+    effectiveAt: '2027-12-15',
     summary: 'Neon moves to AWS eu-central-1.',
     before: { list: 'infrastructure', entry: NEON },
     after: { list: 'infrastructure', entry: NEON_EU },
   }
 
   it('a pending addition is upcoming only and a pending move keeps the current location', () => {
-    const v = view([addHost(), move], '2026-11-10T12:00:00Z')
+    const v = view([addHost(), move], '2027-11-10T12:00:00Z')
     expect(v.aiHosts.map(h => h.gatewaySlug)).not.toContain('examplehost')
     expect(v.infrastructure.find(s => s.id === 'neon')).toEqual(NEON)
     expect(v.pending.map(c => c.id)).toEqual([
-      '2026-11-01-example-host',
-      '2026-11-01-neon-eu',
+      '2027-11-01-example-host',
+      '2027-11-01-neon-eu',
     ])
     expect(v.recent).toEqual([])
   })
 
   it('once in effect the change is in use and listed as recent, newest first', () => {
-    const v = view([addHost(), move], '2026-12-20T00:00:00Z')
+    const v = view([addHost(), move], '2027-12-20T00:00:00Z')
     expect(v.aiHosts.map(h => h.gatewaySlug)).toContain('examplehost')
     expect(v.infrastructure.find(s => s.id === 'neon')).toEqual(NEON_EU)
     expect(v.pending).toEqual([])
     expect(v.recent.map(c => c.id)).toEqual([
-      '2026-11-01-neon-eu',
-      '2026-11-01-example-host',
+      '2027-11-01-neon-eu',
+      '2027-11-01-example-host',
     ])
   })
 
   it('a pending move keeps the entry in its table position', () => {
-    const v = view([move], '2026-11-10T12:00:00Z')
+    const v = view([move], '2027-11-10T12:00:00Z')
     expect(v.infrastructure.map(s => s.id)).toEqual(
       INFRASTRUCTURE_SUBPROCESSORS.map(s => s.id)
     )
@@ -274,14 +274,14 @@ describe('/security subprocessor view (LUM-919)', () => {
     // Logged first, takes effect later; logged second, takes effect sooner.
     const first: SubprocessorChange = {
       ...move,
-      id: '2026-11-01-neon-a',
-      effectiveAt: '2027-01-15',
+      id: '2027-11-01-neon-a',
+      effectiveAt: '2028-01-15',
     }
     const second: SubprocessorChange = {
       ...move,
-      id: '2026-11-02-neon-b',
-      announcedAt: '2026-11-02',
-      effectiveAt: '2026-12-20',
+      id: '2027-11-02-neon-b',
+      announcedAt: '2027-11-02',
+      effectiveAt: '2027-12-20',
       before: { list: 'infrastructure', entry: NEON_EU },
       after: { list: 'infrastructure', entry: NEON_EU2 },
     }
@@ -291,7 +291,7 @@ describe('/security subprocessor view (LUM-919)', () => {
       ),
       aiHosts: AI_HOST_SUBPROCESSORS,
       changes: [first, second],
-      now: new Date('2026-11-10T00:00:00Z'),
+      now: new Date('2027-11-10T00:00:00Z'),
     })
     expect(v.infrastructure.find(s => s.id === 'neon')).toEqual(NEON)
   })
@@ -302,10 +302,10 @@ describe('/security subprocessor view (LUM-919)', () => {
       h === wafer ? NEW_HOST : h
     )
     const replace: SubprocessorChange = {
-      id: '2026-11-01-wafer-replaced',
+      id: '2027-11-01-wafer-replaced',
       kind: 'replaced',
-      announcedAt: '2026-11-01',
-      effectiveAt: '2026-12-01',
+      announcedAt: '2027-11-01',
+      effectiveAt: '2027-12-01',
       summary: 'Example Host replaces Wafer.',
       before: { list: 'aiHost', entry: wafer },
       after: { list: 'aiHost', entry: NEW_HOST },
@@ -314,7 +314,7 @@ describe('/security subprocessor view (LUM-919)', () => {
       infrastructure: INFRASTRUCTURE_SUBPROCESSORS,
       aiHosts: registry,
       changes: [replace],
-      now: new Date('2026-11-10T00:00:00Z'),
+      now: new Date('2027-11-10T00:00:00Z'),
     })
     expect(v.aiHosts).toEqual(AI_HOST_SUBPROCESSORS)
     // A registry that still lists the replaced host never shows it twice.
@@ -322,7 +322,7 @@ describe('/security subprocessor view (LUM-919)', () => {
       infrastructure: INFRASTRUCTURE_SUBPROCESSORS,
       aiHosts: [...AI_HOST_SUBPROCESSORS, NEW_HOST],
       changes: [replace],
-      now: new Date('2026-11-10T00:00:00Z'),
+      now: new Date('2027-11-10T00:00:00Z'),
     })
     expect(stale.aiHosts).toEqual(AI_HOST_SUBPROCESSORS)
   })
@@ -334,21 +334,21 @@ describe('/security subprocessor view (LUM-919)', () => {
       aiHosts: AI_HOST_SUBPROCESSORS.filter(h => h !== wafer),
       changes: [
         {
-          id: '2026-11-01-wafer-removed',
+          id: '2027-11-01-wafer-removed',
           kind: 'removed',
-          announcedAt: '2026-11-01',
-          effectiveAt: '2026-11-15',
+          announcedAt: '2027-11-01',
+          effectiveAt: '2027-11-15',
           summary: 'Wafer stops hosting Lumo models.',
           before: { list: 'aiHost', entry: wafer },
         },
       ],
-      now: new Date('2026-11-10T00:00:00Z'),
+      now: new Date('2027-11-10T00:00:00Z'),
     })
     expect(v.aiHosts.map(h => h.gatewaySlug)).toContain('wafer')
   })
 
   it('drops changes older than a year from the recent list', () => {
-    expect(view([addHost()], '2027-12-02T00:00:00Z').recent).toEqual([])
+    expect(view([addHost()], '2028-12-02T00:00:00Z').recent).toEqual([])
   })
 
   it('with no changes it shows the registry as it is', () => {
@@ -365,9 +365,9 @@ describe('/security subprocessor view (LUM-919)', () => {
 
 describe('send notice-period check (LUM-919)', () => {
   it('refuses under 30 days unless urgent, and never sends a removal', () => {
-    const now = new Date('2026-11-01T09:00:00Z')
+    const now = new Date('2027-11-01T09:00:00Z')
     expect(noticeRefusal(addHost(), now)).toMatch(/29 days from now/)
-    expect(noticeRefusal(addHost({ effectiveAt: '2026-12-02' }), now)).toBe(
+    expect(noticeRefusal(addHost({ effectiveAt: '2027-12-02' }), now)).toBe(
       null
     )
     expect(noticeRefusal(addHost({ urgent: { reason: 'Outage' } }), now)).toBe(
@@ -375,7 +375,7 @@ describe('send notice-period check (LUM-919)', () => {
     )
     expect(
       noticeRefusal(
-        addHost({ kind: 'removed', effectiveAt: '2026-12-31' }),
+        addHost({ kind: 'removed', effectiveAt: '2027-12-31' }),
         now
       )
     ).toMatch(/removals are recorded, not announced/)

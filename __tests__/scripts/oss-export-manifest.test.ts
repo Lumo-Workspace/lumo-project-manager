@@ -846,9 +846,6 @@ describe('oss/manifest.json', () => {
       expect(read('components/landing/home/lumo-home.tsx')).toContain(
         'SECURITY SCAN'
       )
-      expect(read('components/landing/home/faq.tsx')).toContain(
-        'for all but boundary-crossing triage'
-      )
     })
 
     it('publish.sh is a dry run: it never pushes, tags remotely or calls GitHub', () => {
@@ -971,7 +968,9 @@ describe('oss/manifest.json', () => {
       for (const f of locales) {
         const d = JSON.parse(read(f)) as Record<string, string>
         const variants = Object.keys(d).filter(k => k.startsWith('oss.'))
-        expect(variants.length).toBe(9)
+        // 8 since LUM-1349: the AI-host intro no longer names a triage
+        // exception, so the hosted text needs no snapshot variant.
+        expect(variants.length).toBe(8)
         for (const v of variants) {
           expect({ f, v, base: v.slice(4) in d }).toEqual({ f, v, base: true })
           expect(d[v]).not.toBe(d[v.slice(4)])
