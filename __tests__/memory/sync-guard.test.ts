@@ -8,7 +8,7 @@
  * while the bundle is built, before the content hash is taken, so every CLI
  * version receives guarded files and both sides agree on the hash.
  */
-import { mkdtempSync, readFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { applySync } from '@/cli/src/lib/apply-sync'
@@ -160,20 +160,24 @@ describe('content hash agrees between server and CLI', () => {
       expect(entry.contentHash).toBe(hashBody(entry.body))
 
       const root = mkdtempSync(join(tmpdir(), 'lumo-sync-guard-'))
-      const bundle = { projectId: 'p1', entries: [entry] }
-      expect(applySync(root, bundle).added).toEqual([m.id])
+      try {
+        const bundle = { projectId: 'p1', entries: [entry] }
+        expect(applySync(root, bundle).added).toEqual([m.id])
 
-      const owned = readOwned(root)
-      expect(owned).toHaveLength(1)
-      expect(owned[0]?.contentHash).toBe(entry.contentHash)
-      expect(owned[0]?.diskHash).toBe(entry.contentHash)
+        const owned = readOwned(root)
+        expect(owned).toHaveLength(1)
+        expect(owned[0]?.contentHash).toBe(entry.contentHash)
+        expect(owned[0]?.diskHash).toBe(entry.contentHash)
 
-      // The file on disk is the guarded body, and a second sync is a no-op.
-      const onDisk = readFileSync(join(root, 'team', `${m.id}.md`), 'utf8')
-      expect(onDisk).toContain('<untrusted-team-memory>')
-      const again = applySync(root, bundle)
-      expect(again.noop).toBe(true)
-      expect(again.skippedDrift).toEqual([])
+        // The file on disk is the guarded body, and a second sync is a no-op.
+        const onDisk = readFileSync(join(root, 'team', `${m.id}.md`), 'utf8')
+        expect(onDisk).toContain('<untrusted-team-memory>')
+        const again = applySync(root, bundle)
+        expect(again.noop).toBe(true)
+        expect(again.skippedDrift).toEqual([])
+      } finally {
+        rmSync(root, { recursive: true, force: true })
+      }
     }
   )
 })
