@@ -1,6 +1,6 @@
 # Lumo Subprocessors
 
-Last updated: 2026-11-18 · Draft for legal review (LUM-857)
+Last updated: 2026-11-19 · Draft for legal review (LUM-857)
 
 This page lists the third parties ("subprocessors") that [Lumo legal entity] ("Lumo", "we") engages to process Customer Personal Data on behalf of our customers when providing the Lumo service. It is the list referenced by the Lumo Data Processing Agreement (DPA). We notify customers of changes as described in "Changes to this list" below.
 
@@ -77,6 +77,6 @@ The main tables above list only subprocessors in effect on the "Last updated" da
 | 2026-10-12-clerk-purpose | 2026-10-12 | 2026-10-12 | Clerk (authentication): no longer handles sign-in since Lumo moved sign-in to its own authentication service on 2026-10-12. Clerk keeps the account data it already held only so that Lumo can switch back if needed, and that data is deleted no later than 2026-11-11. |
 | 2026-10-14-anthropic-purpose | 2026-10-14 | 2026-10-14 | Anthropic (AI model hosting): purpose extended from AI code review to AI code review and security hunt of pull requests, because the model the hunt ran on through Alibaba Cloud was withdrawn. Hunt requests go only to Anthropic's own API under zero data retention; no subprocessor is added. |
 | 2026-10-28-clerk-removed | 2026-10-28 | 2026-10-28 | Clerk (authentication) removed: its instance, and with it the account data it still held from before Lumo moved sign-in to its own authentication service, was deleted on 2026-10-28. |
-| 2026-11-18-typesafe-added | 2026-11-18 | 2026-11-18 | TypeSafe AI (AI model hosting) added for boundary-crossing triage: the Jev model is now served only by TypeSafe's own API, under zero data retention. DigitalOcean no longer receives triage requests, and the earlier exception to zero data retention for triage ends. |
+| 2026-11-19-typesafe-added | 2026-11-19 | 2026-11-19 | TypeSafe AI (AI model hosting) added for boundary-crossing triage: the Jev model is now served only by TypeSafe's own API, under zero data retention. DigitalOcean no longer receives triage requests, and the earlier exception to zero data retention for triage ends. |
 
 Workspace owners receive change notices automatically. A customer can ask [privacy@uselumo.ai] to send these notices to one additional recipient address as well, which we record manually. Anyone else who wants to hear about changes, or who has a question about this list, can contact [privacy@uselumo.ai].

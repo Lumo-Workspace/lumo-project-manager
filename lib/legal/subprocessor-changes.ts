@@ -248,10 +248,10 @@ export const SUBPROCESSOR_CHANGES: readonly SubprocessorChange[] = [
     // model and routes to it first (probed 2026-11-18); it is the only host
     // that offers zero data retention, so triage is pinned to it with ZDR
     // forced. DigitalOcean stays listed for the open-weight models.
-    id: '2026-11-18-typesafe-added',
+    id: '2026-11-19-typesafe-added',
     kind: 'added',
-    announcedAt: '2026-11-18',
-    effectiveAt: '2026-11-18',
+    announcedAt: '2026-11-19',
+    effectiveAt: '2026-11-19',
     urgent: {
       reason:
         "Correction of an outdated description: the Vercel AI Gateway already serves the Jev model from TypeSafe's own API as well as DigitalOcean, and restricting boundary-crossing triage to TypeSafe's API is what puts it under zero data retention.",

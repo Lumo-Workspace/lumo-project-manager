@@ -25,7 +25,7 @@
 export const SECURITY_CONTACT_EMAIL = 'hello@uselumo.ai'
 
 /** Date the /security page and this list were last reviewed (ISO). */
-export const SECURITY_PAGE_UPDATED = '2026-11-18'
+export const SECURITY_PAGE_UPDATED = '2026-11-19'
 
 /**
  * `us`: United States. `globalEdge`: served from the edge, nothing retained.

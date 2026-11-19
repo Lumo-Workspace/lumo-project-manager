@@ -3,14 +3,14 @@
 > LUM-854 · ZDR 实测于 2026-09-26(LUM-854 ZDR 探针,内部评测工具),数据地域实测于 2026-09-27。
 > LUM-871 · 探针于 2026-10-04 重跑,原始输出存档于内部评测目录(见「原始探针输出」一节);Vercel ZDR 排除限制核对于 2026-10-03(见注意事项第 10 条)。
 > LUM-988 · 新增 `CODE_REVIEW_MODEL`(`anthropic/claude-sonnet-5.5`,PR 扫描的 AI 代码评审),由 `zdr-fetch.ts` 在线路层钉死只走 Anthropic 官方 API;探针于 2026-10-04 23:11Z 重跑并覆盖原始输出。
-> LUM-1349 · 越界 AI 复核(`CROSSING_TRIAGE_MODEL`,TypeSafe Jev)自 2026-11-18 起经线路层强制 ZDR 并钉死只走 TypeSafe 官方 API;此前的「唯一例外」不再存在。实测于 2026-11-18(见注意事项第 8 条)。
+> LUM-1349 · 越界 AI 复核(`CROSSING_TRIAGE_MODEL`,TypeSafe Jev)自 2026-11-19 起经线路层强制 ZDR 并钉死只走 TypeSafe 官方 API;此前的「唯一例外」不再存在。实测于 2026-11-18(见注意事项第 8 条)。
 > 本文是对外隐私说明的**事实依据**,不是对外文案本身;对外发布前需法务审阅。
 
 ## 一句话结论
 
 Lumo 发给大模型的所有请求(chat、embedding 与 evaluation)都经 Vercel AI Gateway,并在**请求线路层强制** `zeroDataRetention: true`:Gateway 只会把请求路由到与 Vercel 签有零数据保留(ZDR)协议的供应商;若某模型没有这样的供应商,请求直接失败(`no_providers_available`),**不会降级**到没有 ZDR 协议的供应商。ZDR 包含「不用于训练」。**但这道闸只按「供应商」过滤**:Vercel 文档写明,个别供应商会把特定模型或功能排除在其 ZDR 政策之外,这类请求 Gateway **不会让它失败**;我们用到的模型与功能逐项核对见注意事项第 10 条。处理地域目前不固定(见「数据地域」一节)。
 
-**越界 AI 复核(LUM-945 / LUM-1349)**:用 TypeSafe Jev(`CROSSING_TRIAGE_MODEL`)。它是 evaluation 模型,经 `ee/security/ai/evaluation.ts` 直接调 Gateway 的 `evaluation-model` 端点;该封装用与 `lib/ai/gateway.ts` 同一个 `createZdrFetch`,所以同样强制 ZDR,并被 `MODEL_PROVIDER_PINS` 钉死只走 TypeSafe 官方 API(`typesafe-ai`)。Jev 在 Gateway 上的另一家供应商 DigitalOcean 标注 `zdr: none`,带 ZDR 时被 Gateway 以 `zdr_ineligible_model` 跳过。2026-10-03 到 2026-11-18 之间它是唯一不经 ZDR 层的请求(用户裁定的例外),现已取消。工作区关闭 AI review 开关即不调用。
+**越界 AI 复核(LUM-945 / LUM-1349)**:用 TypeSafe Jev(`CROSSING_TRIAGE_MODEL`)。它是 evaluation 模型,经 `ee/security/ai/evaluation.ts` 直接调 Gateway 的 `evaluation-model` 端点;该封装用与 `lib/ai/gateway.ts` 同一个 `createZdrFetch`,所以同样强制 ZDR,并被 `MODEL_PROVIDER_PINS` 钉死只走 TypeSafe 官方 API(`typesafe-ai`)。Jev 在 Gateway 上的另一家供应商 DigitalOcean 标注 `zdr: none`,带 ZDR 时被 Gateway 以 `zdr_ineligible_model` 跳过。2026-10-03 到 2026-11-19 之间它是唯一不经 ZDR 层的请求(用户裁定的例外),现已取消。工作区关闭 AI review 开关即不调用。
 
 ## 怎么保证的(以及怎么防漂移)
 

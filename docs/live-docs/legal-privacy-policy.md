@@ -1,6 +1,6 @@
 # Lumo Privacy Policy
 
-Last updated: 2026-11-18 · Draft for legal review (LUM-857)
+Last updated: 2026-11-19 · Draft for legal review (LUM-857)
 
 This policy explains what personal data [Lumo legal entity], [registered address] ("Lumo", "we", "us") collects when you use the Lumo website, web application, command-line tool (CLI) and integrations (together, the "Service"), why we collect it, how long we keep it, who we share it with, and the rights you have.
 
