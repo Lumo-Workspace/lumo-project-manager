@@ -194,7 +194,9 @@ describe('guardSyncHeadline', () => {
     expect(guardSyncHeadline('a\n  b <!-- c -->').text).toBe('a b (!-- c --)')
   })
 
-  it('treats every line-break character as a break, not only \\n', () => {
+  // \n, U+2028 and U+2029 become a space; a lone \r and U+0085 are control
+  // characters, which the sanitizer removes outright.
+  it('leaves no line-break character of any kind in the headline', () => {
     expect(guardSyncHeadline('a\r\nb\u2028c\u2029d\u0085e\rf').text).toBe(
       'a b c def'
     )
