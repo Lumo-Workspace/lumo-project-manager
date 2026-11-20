@@ -45,6 +45,8 @@ export const CORE_WORKSPACE_COLUMNS: readonly string[] = [
   'doneRequiresTestCase',
   'doneRequiresReview',
   'aiFeatureSwitches',
+  'judgmentMode',
+  'judgmentAdmission',
   'deletionRequestedAt',
   'deletionExecuteAt',
   'deletionRequestedByClerkId',

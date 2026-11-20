@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireIdentity } from '@/lib/auth'
+import { requireHumanWebSession } from '@/lib/auth/human-web-session'
 import { projectRepository } from '@/lib/repositories'
 import { mergeConfirmed } from '@/lib/services/memory/batch-consolidate.service'
 
@@ -30,15 +31,11 @@ export async function POST(request: NextRequest, { params }: Params) {
   const identity = await requireIdentity(request)
   if (identity instanceof NextResponse) return identity
 
-  if (identity.source !== 'clerk') {
-    return NextResponse.json(
-      {
-        error:
-          'Memories can only be merged from a human-authenticated browser session — the agent/CLI path is closed by design',
-      },
-      { status: 403 }
-    )
-  }
+  const webOnly = requireHumanWebSession(
+    identity,
+    'Memories can only be merged from a human-authenticated browser session — the agent/CLI path is closed by design'
+  )
+  if (webOnly) return webOnly
 
   const { id } = await params
   const project = await projectRepository.findWorkspaceId(id)

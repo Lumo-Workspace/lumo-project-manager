@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireIdentity } from '@/lib/auth'
+import { requireHumanWebSession } from '@/lib/auth/human-web-session'
 import { resolveTaskParam } from '@/lib/api/resolve-task-param'
 import { boundaryCrossingService } from '@/lib/services/boundary-crossing.service'
 import { memberAuditContext } from '@/lib/api/audit-context'
@@ -23,15 +24,11 @@ export async function DELETE(request: NextRequest, { params }: Params) {
   const identity = await requireIdentity(request)
   if (identity instanceof NextResponse) return identity
 
-  if (identity.source !== 'clerk') {
-    return NextResponse.json(
-      {
-        error:
-          'A suppression rule can only be revoked from a human-authenticated browser session — the agent/CLI path is closed by design',
-      },
-      { status: 403 }
-    )
-  }
+  const webOnly = requireHumanWebSession(
+    identity,
+    'A suppression rule can only be revoked from a human-authenticated browser session — the agent/CLI path is closed by design'
+  )
+  if (webOnly) return webOnly
 
   const { id: rawId, ruleId } = await params
   const task = await resolveTaskParam(rawId, identity.workspaceId)

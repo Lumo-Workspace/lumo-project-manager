@@ -7,6 +7,8 @@ jest.mock('@/lib/repositories/ai-derived-content.repository', () => ({
     findEnabled: jest.fn(),
     countForWorkspace: jest.fn(),
     deleteMemoryBatch: jest.fn(),
+    // LUM-1356: reviewed team memory entries are deleted with the memories.
+    deleteJudgmentBatch: jest.fn(async () => 0),
     clearSessionSummaryBatch: jest.fn(),
     clearRunSummaryBatch: jest.fn(),
     clearClaimSnapshotBatch: jest.fn(),
@@ -30,6 +32,7 @@ const WS = { id: 'w1', name: 'Acme' }
 beforeEach(() => {
   jest.clearAllMocks()
   repo.deleteMemoryBatch!.mockResolvedValue(0)
+  repo.deleteJudgmentBatch!.mockResolvedValue(0)
   repo.clearSessionSummaryBatch!.mockResolvedValue(0)
   repo.clearRunSummaryBatch!.mockResolvedValue(0)
   repo.clearClaimSnapshotBatch!.mockResolvedValue(0)

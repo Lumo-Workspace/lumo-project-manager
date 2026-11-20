@@ -98,6 +98,10 @@ import * as taskCommentRoute from '@/app/api/tasks/[id]/comments/[commentId]/rou
 import * as milestoneRoute from '@/app/api/milestones/[milestoneId]/route'
 import * as sprintRoute from '@/app/api/sprints/[sprintId]/route'
 import * as memoryRoute from '@/app/api/memories/[memoryId]/route'
+import * as judgmentRoute from '@/app/api/judgments/[judgmentId]/route'
+import * as judgmentRevisionsRoute from '@/app/api/judgments/[judgmentId]/revisions/route'
+import * as judgmentRevisionRoute from '@/app/api/judgment-revisions/[revisionId]/route'
+import * as judgmentReviewRoute from '@/app/api/judgment-revisions/[revisionId]/[action]/route'
 import * as apiKeysRoute from '@/app/api/users/api-keys/route'
 import * as apiKeyRoute from '@/app/api/users/api-keys/[id]/route'
 import * as teamTasksRoute from '@/app/api/teams/[teamId]/tasks/route'
@@ -169,6 +173,11 @@ interface WorkspaceFixture {
   documentId: string
   documentSlug: string
   memoryId: string
+  /** LUM-1356: a team memory judgment with one pending revision. */
+  judgmentId: string
+  judgmentName: string
+  judgmentRevisionId: string
+  judgmentDigest: string
   apiKeyId: string
 }
 
@@ -205,7 +214,13 @@ async function seedWorkspace(
   const db = harness.prisma!
   const mark = label === 'bravo' ? BRAVO_MARK : 'alpha-own'
   const ws = await db.workspace.create({
-    data: { name: `${mark} workspace`, slug: `idor-${label}` },
+    // LUM-1356: team memory review on, so a judgment route denies for the
+    // tenant boundary and not because the feature is off.
+    data: {
+      name: `${mark} workspace`,
+      slug: `idor-${label}`,
+      judgmentMode: 'REVIEW',
+    },
   })
   const owner = await db.workspaceMember.create({
     data: { workspaceId: ws.id, clerkId: ownerClerkId, role: 'OWNER' },
@@ -298,6 +313,29 @@ async function seedWorkspace(
       createdByMemberId: owner.id,
     },
   })
+  const judgment = await db.judgment.create({
+    data: { workspaceId: ws.id, name: `${label}-reviewed-entry` },
+  })
+  const judgmentRevision = await db.judgmentRevision.create({
+    data: {
+      judgmentId: judgment.id,
+      workspaceId: ws.id,
+      version: 1,
+      digest: `sha256:${sha256(`${mark} judgment`)}`,
+      description: `${mark} judgment description`,
+      statement: `${mark} judgment statement`,
+      kind: 'CONSTRAINT',
+      rationale: `${mark} judgment rationale`,
+      when: [],
+      limits: [`${mark} judgment limit`],
+      origin: 'HUMAN_JUDGMENT',
+      recordedByMemberId: owner.id,
+      recordedVia: 'WEB',
+      captureMethod: 'EXPLICIT',
+      sourceRefs: [],
+      evidence: [],
+    },
+  })
   const apiKey = await db.apiKey.create({
     data: {
       workspaceMemberId: owner.id,
@@ -319,6 +357,10 @@ async function seedWorkspace(
     documentId: document.id,
     documentSlug: document.slug,
     memoryId: memory.id,
+    judgmentId: judgment.id,
+    judgmentName: judgment.name,
+    judgmentRevisionId: judgmentRevision.id,
+    judgmentDigest: judgmentRevision.digest,
     apiKeyId: apiKey.id,
   }
 }
@@ -480,6 +522,9 @@ async function snapshotProtected() {
     comments,
     document,
     memory,
+    judgment,
+    judgmentRevisions,
+    judgmentEvents,
     apiKey,
   ] = await Promise.all([
     db.task.findMany({
@@ -513,6 +558,16 @@ async function snapshotProtected() {
       where: { id: b.memoryId },
       select: { content: true, status: true, scope: true },
     }),
+    db.judgment.findUnique({
+      where: { id: b.judgmentId },
+      select: { activeRevisionId: true, pausedAt: true },
+    }),
+    db.judgmentRevision.findMany({
+      where: { judgmentId: b.judgmentId },
+      select: { id: true, state: true, statement: true },
+      orderBy: { id: 'asc' },
+    }),
+    db.judgmentEvent.count({ where: { judgmentId: b.judgmentId } }),
     db.apiKey.findUnique({
       where: { id: b.apiKeyId },
       select: { revokedAt: true },
@@ -526,11 +581,17 @@ async function snapshotProtected() {
     comments,
     document,
     memory,
+    judgment,
+    judgmentRevisions,
+    judgmentEvents,
     apiKey,
   }
 }
 
+const ORIGINAL_JUDGMENT_ROLLOUT = process.env.LUMO_JUDGMENT_WORKSPACES
+
 beforeAll(async () => {
+  process.env.LUMO_JUDGMENT_WORKSPACES = '*'
   await harness.start()
   holder.client = withSoftDelete(harness.prisma!)
   fx.alpha = await seedWorkspace(
@@ -551,6 +612,9 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
+  if (ORIGINAL_JUDGMENT_ROLLOUT === undefined)
+    delete process.env.LUMO_JUDGMENT_WORKSPACES
+  else process.env.LUMO_JUDGMENT_WORKSPACES = ORIGINAL_JUDGMENT_ROLLOUT
   await harness.stop()
 })
 
@@ -936,6 +1000,72 @@ function crossTenantCases(): DeniedCase[] {
     )
   )
 
+  // team memory judgments (LUM-1356)
+  add('judgment', 'read', BOTH, 'GET /api/judgments/[judgmentId]', as =>
+    call(
+      judgmentRoute.GET,
+      'GET',
+      `/api/judgments/${B().judgmentId}?history=1`,
+      { judgmentId: B().judgmentId },
+      as
+    )
+  )
+  add(
+    'judgment',
+    'read',
+    BOTH,
+    'GET /api/judgment-revisions/[revisionId]',
+    as =>
+      call(
+        judgmentRevisionRoute.GET,
+        'GET',
+        `/api/judgment-revisions/${B().judgmentRevisionId}`,
+        { revisionId: B().judgmentRevisionId },
+        as
+      )
+  )
+  add(
+    'judgment',
+    'update',
+    BOTH,
+    'POST /api/judgments/[judgmentId]/revisions',
+    as =>
+      call(
+        judgmentRevisionsRoute.POST,
+        'POST',
+        `/api/judgments/${B().judgmentId}/revisions`,
+        { judgmentId: B().judgmentId },
+        as,
+        {
+          baseRevisionId: null,
+          content: {
+            description: 'pwned by alpha',
+            statement: 'pwned by alpha',
+            kind: 'CONSTRAINT',
+            rationale: 'pwned by alpha',
+            limits: ['none'],
+          },
+        }
+      )
+  )
+  for (const action of ['approve', 'reject', 'request-changes', 'withdraw']) {
+    add(
+      'judgment',
+      action === 'approve' ? 'update' : 'delete',
+      BOTH,
+      `POST /api/judgment-revisions/[revisionId]/${action}`,
+      as =>
+        call(
+          judgmentReviewRoute.POST,
+          'POST',
+          `/api/judgment-revisions/${B().judgmentRevisionId}/${action}`,
+          { revisionId: B().judgmentRevisionId, action },
+          as,
+          { digest: B().judgmentDigest, reason: 'pwned by alpha' }
+        )
+    )
+  }
+
   // API key — management routes are Clerk-only. Delete = revoke BRAVO's key
   // by id; read (the caller's own key list) is asserted separately below.
   add('api-key', 'delete', ['clerk'], 'DELETE /api/users/api-keys/[id]', as =>
@@ -1203,6 +1333,30 @@ describe('LUM-978 fixture controls: the owning caller is allowed', () => {
           '/x',
           { memoryId: B().memoryId },
           { ...owner, source: 'bearer' }
+        ),
+    ],
+    [
+      'judgment GET /api/judgments/[judgmentId]',
+      'bearer',
+      () =>
+        call(
+          judgmentRoute.GET,
+          'GET',
+          '/x',
+          { judgmentId: B().judgmentId },
+          { ...owner, source: 'bearer' }
+        ),
+    ],
+    [
+      'judgment GET /api/judgment-revisions/[revisionId]',
+      'clerk',
+      () =>
+        call(
+          judgmentRevisionRoute.GET,
+          'GET',
+          '/x',
+          { revisionId: B().judgmentRevisionId },
+          { ...owner, source: 'clerk' }
         ),
     ],
     [

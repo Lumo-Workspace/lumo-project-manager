@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireIdentity } from '@/lib/auth'
+import { requireHumanWebSession } from '@/lib/auth/human-web-session'
 import { zodError } from '@/lib/api/helpers'
 import { milestoneCloseOverrideSchema } from '@/lib/validation/schemas'
 import { milestoneService } from '@/lib/services/milestone.service'
@@ -24,15 +25,11 @@ export async function POST(request: NextRequest, { params }: Params) {
   try {
     const identity = await requireIdentity(request)
     if (identity instanceof NextResponse) return identity
-    if (identity.source !== 'clerk') {
-      return NextResponse.json(
-        {
-          error:
-            'Overriding the milestone close gate is human-only; run the milestone test cases (`lumo milestone testcase run`) instead.',
-        },
-        { status: 403 }
-      )
-    }
+    const webOnly = requireHumanWebSession(
+      identity,
+      'Overriding the milestone close gate is human-only; run the milestone test cases (`lumo milestone testcase run`) instead.'
+    )
+    if (webOnly) return webOnly
     const { milestoneId } = await params
 
     const body = await request.json().catch(() => ({}))

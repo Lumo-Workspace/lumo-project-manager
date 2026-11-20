@@ -24,6 +24,7 @@ import { useProjects } from '../hooks/useProjects'
 import { ProjectsSidebarGroup } from './sidebar/ProjectsSidebarGroup'
 import { FeedbackSidebarItem } from './sidebar/FeedbackSidebarItem'
 import { CrossingsSidebarItem } from './sidebar/CrossingsSidebarItem'
+import { TeamMemorySidebarItem } from './sidebar/TeamMemorySidebarItem'
 import { clearCache } from '../cache'
 import { Badge } from '@/components/ui/badge'
 import { MemberAvatar } from '@/components/MemberAvatar'
@@ -275,6 +276,11 @@ export function AppSidebar({
               <CrossingsSidebarItem
                 workspaceUrl={workspaceUrl}
                 isActive={currentPage === 'boundary-crossings'}
+                onNavigate={onNavigate}
+              />
+              <TeamMemorySidebarItem
+                workspaceUrl={workspaceUrl}
+                isActive={currentPage === 'team-memory'}
                 onNavigate={onNavigate}
               />
             </SidebarMenu>

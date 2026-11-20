@@ -61,6 +61,9 @@ interface CoreWorkspaceSettingsInput {
   doneRequiresReview?: boolean | undefined
   /** LUM-1338: the AI feature switches (set by aiFeaturesService only). */
   aiFeatureSwitches?: AiFeatureSwitches | undefined
+  /** LUM-1356: team memory judgments (set by judgmentSettingsService only). */
+  judgmentMode?: 'OFF' | 'REVIEW' | undefined
+  judgmentAdmission?: 'ANY_MEMBER' | 'OWNER_ONLY' | undefined
 }
 
 // ── Retention changes (LUM-933) ─────────────────────────────────────────────
@@ -208,6 +211,9 @@ export const workspaceService = {
       data.doneRequiresReview = input.doneRequiresReview
     if (input.aiFeatureSwitches !== undefined)
       data.aiFeatureSwitches = input.aiFeatureSwitches
+    if (input.judgmentMode !== undefined) data.judgmentMode = input.judgmentMode
+    if (input.judgmentAdmission !== undefined)
+      data.judgmentAdmission = input.judgmentAdmission
     // LUM-1062: plugin-owned columns (e.g. the security plugin's policy,
     // evidence retention and scan switches) go in the same update + audit.
     Object.assign(data, pluginWorkspaceWrites(input))

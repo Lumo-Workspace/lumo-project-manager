@@ -530,6 +530,10 @@ model Workspace {
   // Off by default: unpushed-commit metadata is sensitive, so an OWNER opts
   // in. Off = the upload endpoint refuses; rows already logged stay.
   securityLocalScanLogEnabled Boolean @default(false)
+  // LUM-1356: team memory judgments rollout switch and who may review.
+  judgmentMode            JudgmentMode      @default(OFF)
+  judgmentAdmission       JudgmentAdmission @default(ANY_MEMBER)
+  judgments               Judgment[]
   workspaceExports        WorkspaceExport[]
 
   // LUM-918: pending deletion. An OWNER's delete schedules it 48h out
@@ -953,6 +957,7 @@ model Project {
   priorityOverrides        PriorityOverride[]
   summaries                ProjectSummary[]
   memories                 Memory[]
+  judgments                Judgment[]
   projectPolicies          ProjectPolicy[]
   crossingSuppressionRules CrossingSuppressionRule[]
   forbiddenRuleSnapshot    ForbiddenRuleSnapshot?
@@ -3651,6 +3656,203 @@ model MemoryProvenance {
   @@unique([childMemoryId, parentMemoryId])
   @@index([parentMemoryId])
   @@map("memory_provenance")
+}
+
+// ─── Team memory judgments (LUM-1356) ───────────────────────────────────────
+// Design: docs/rfc/2026-11-18-LUM-1354-memory-as-reviewed-judgments.md §4–5.
+
+/// The per-workspace rollout switch. OFF = today's behaviour; REVIEW =
+/// candidates can be proposed, revised and reviewed, delivery unchanged;
+/// CUTOVER (a later phase) = only approved revisions are delivered.
+enum JudgmentMode {
+  OFF
+  REVIEW
+  CUTOVER
+}
+
+/// Who may approve, reject, request changes on or withdraw a revision.
+enum JudgmentAdmission {
+  ANY_MEMBER
+  OWNER_ONLY
+}
+
+enum JudgmentKind {
+  CONDITIONAL_GUIDANCE
+  CASE
+  HYPOTHESIS
+  CONSTRAINT
+}
+
+enum JudgmentPolarity {
+  PREFER
+  AVOID
+}
+
+enum JudgmentOrigin {
+  HUMAN_GUIDANCE
+  HUMAN_JUDGMENT
+  AGENT_JUDGMENT
+  AGENT_ASSUMPTION
+  UNKNOWN
+}
+
+/// How the request that wrote a row authenticated. Set by the server from the
+/// credential type, never from the request body.
+enum JudgmentChannel {
+  WEB
+  CLI
+  PIPELINE
+}
+
+enum JudgmentCaptureMethod {
+  EXPLICIT
+  EXTRACTED
+  IMPORTED
+  MIGRATED
+}
+
+enum JudgmentRevisionState {
+  PROPOSED
+  CHANGES_REQUESTED
+  REJECTED
+  EXPIRED
+  APPROVED
+  SUPERSEDED
+  WITHDRAWN
+}
+
+enum JudgmentEventType {
+  PROPOSED
+  CHANGES_REQUESTED
+  REJECTED
+  APPROVED
+  WITHDRAWN
+  EXPIRED
+  CONFLICT_FLAGGED
+  CONFLICT_RESOLVED
+  CHALLENGED
+}
+
+/// The stable identity of one judgment across its revisions.
+model Judgment {
+  id               String    @id @default(cuid())
+  workspaceId      String
+  /// Null = applies to the whole workspace.
+  projectId        String?
+  /// Short identifier, unique in the workspace.
+  name             String
+  /// The approved revision in effect; null = none (never approved, or withdrawn).
+  activeRevisionId String?
+  /// Set while the active revision is in an assertion conflict with another
+  /// judgment's active or pending revision: reuse is paused until it is
+  /// resolved. Governance state — every change is paired with a
+  /// CONFLICT_FLAGGED / CONFLICT_RESOLVED event.
+  pausedAt         DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  workspace Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project   Project?           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  revisions JudgmentRevision[]
+  events    JudgmentEvent[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId, projectId])
+  @@map("judgments")
+}
+
+/// One immutable revision. Every content column is covered by `digest`
+/// (lib/judgment/digest.ts); only `state` changes afterwards, and only together
+/// with a judgment_events row. Member / session / task ids are FK-less on
+/// purpose: removing a member or a task must not erase who judged or approved.
+model JudgmentRevision {
+  id             String  @id @default(cuid())
+  judgmentId     String
+  workspaceId    String
+  version        Int
+  /// sha256 of the canonical content; approval and withdrawal must quote it.
+  digest         String
+  /// The revision this one changes: the judgment's active revision when it was
+  /// proposed (null = there was none).
+  baseRevisionId String?
+
+  description    String
+  statement      String            @db.Text
+  kind           JudgmentKind
+  /// Null = no reason was recorded. Never filled in by guessing.
+  rationale      String?           @db.Text
+  polarity       JudgmentPolarity?
+  /// Optional key/value used for the deterministic conflict check.
+  assertionKey   String?
+  assertionValue Json?
+
+  scopeRepo      String?
+  scopePathGlobs Json?
+  /// A grouping word for people; not used for matching.
+  scopeTopic     String?
+  /// [{ field, equals }] — scalar equality only.
+  when           Json
+  /// Prose limits, at least one; not used for matching.
+  limits         Json
+  validFrom      DateTime?
+  /// Exclusive.
+  validUntil     DateTime?
+
+  origin             JudgmentOrigin
+  judgedByMemberId   String?
+  judgedByLabel      String?
+  recordedByMemberId String?
+  recordedByAgent    TaskArtifactAgent?
+  recordedVia        JudgmentChannel
+  captureMethod      JudgmentCaptureMethod
+  sourceSessionId    String?
+  sourceTaskId       String?
+  sourceRefs         Json
+
+  /// [{ reference, role: supports | challenges | context, summary }]
+  evidence        Json
+  context         Json?
+  alternatives    Json?
+  expectedOutcome Json?
+
+  state          JudgmentRevisionState        @default(PROPOSED)
+  /// The legacy memory this revision was converted from (a later phase).
+  legacyMemoryId String?
+  /// Injection scan of the untrusted text, computed once at write time
+  /// (same shape as Memory.contentSignals).
+  contentSignals Json?
+  /// Reserved for duplicate hints and ranking (a later phase); never part of
+  /// applicability. Not written yet.
+  embedding      Unsupported("vector(1024)")?
+  createdAt      DateTime                     @default(now())
+
+  judgment Judgment @relation(fields: [judgmentId], references: [id], onDelete: Cascade)
+
+  @@unique([judgmentId, version])
+  @@index([workspaceId, state])
+  @@index([workspaceId, assertionKey])
+  @@map("judgment_revisions")
+}
+
+/// Append-only governance record. Approval lives only here and is never part
+/// of an exported judgment.
+model JudgmentEvent {
+  id             String            @id @default(cuid())
+  workspaceId    String
+  judgmentId     String
+  revisionId     String?
+  revisionDigest String?
+  type           JudgmentEventType
+  actorMemberId  String?
+  channel        JudgmentChannel
+  reason         String?           @db.Text
+  createdAt      DateTime          @default(now())
+
+  judgment Judgment @relation(fields: [judgmentId], references: [id], onDelete: Cascade)
+
+  @@index([judgmentId, createdAt])
+  @@index([workspaceId, type, createdAt])
+  @@map("judgment_events")
 }
 
 // ─── Task Slack Context ──────────────────────────────────────────────────────

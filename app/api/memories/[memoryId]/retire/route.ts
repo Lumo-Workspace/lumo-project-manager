@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireIdentity } from '@/lib/auth'
+import { requireHumanWebSession } from '@/lib/auth/human-web-session'
 import { memoryRepository } from '@/lib/repositories'
 import { retireConfirmed } from '@/lib/services/memory/retire.service'
 
@@ -22,15 +23,11 @@ export async function POST(request: NextRequest, { params }: Params) {
   const identity = await requireIdentity(request)
   if (identity instanceof NextResponse) return identity
 
-  if (identity.source !== 'clerk') {
-    return NextResponse.json(
-      {
-        error:
-          'A memory can only be retired from a human-authenticated browser session — the agent/CLI path is closed by design',
-      },
-      { status: 403 }
-    )
-  }
+  const webOnly = requireHumanWebSession(
+    identity,
+    'A memory can only be retired from a human-authenticated browser session — the agent/CLI path is closed by design'
+  )
+  if (webOnly) return webOnly
 
   const { memoryId } = await params
   const existing = await memoryRepository.findByIdWithWorkspace(memoryId)

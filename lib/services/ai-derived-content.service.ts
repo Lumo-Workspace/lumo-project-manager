@@ -116,6 +116,15 @@ export const aiDerivedContentService = {
           ),
       },
       {
+        // LUM-1356: reviewed team memory entries count as memories.
+        key: 'memories',
+        run: () =>
+          aiDerivedContentRepository.deleteJudgmentBatch(
+            workspaceId,
+            AI_DERIVED_PURGE_BATCH_SIZE
+          ),
+      },
+      {
         key: 'sessionSummaries',
         run: () =>
           aiDerivedContentRepository.clearSessionSummaryBatch(

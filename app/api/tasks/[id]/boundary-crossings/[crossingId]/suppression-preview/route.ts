@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireIdentity } from '@/lib/auth'
+import { requireHumanWebSession } from '@/lib/auth/human-web-session'
 import { resolveTaskParam } from '@/lib/api/resolve-task-param'
 import { resolveCrossingParam } from '@/lib/api/resolve-crossing-param'
 import { boundaryCrossingService } from '@/lib/services/boundary-crossing.service'
@@ -24,15 +25,11 @@ export async function GET(request: NextRequest, { params }: Params) {
   const identity = await requireIdentity(request)
   if (identity instanceof NextResponse) return identity
 
-  if (identity.source !== 'clerk') {
-    return NextResponse.json(
-      {
-        error:
-          'The suppression preview is part of the human-only ruling flow — the agent/CLI path is closed by design',
-      },
-      { status: 403 }
-    )
-  }
+  const webOnly = requireHumanWebSession(
+    identity,
+    'The suppression preview is part of the human-only ruling flow — the agent/CLI path is closed by design'
+  )
+  if (webOnly) return webOnly
 
   // LUM-963: preview the scope the human is about to pick.
   const scope = suppressionPreviewScopeSchema.safeParse(

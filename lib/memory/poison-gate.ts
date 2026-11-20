@@ -305,7 +305,28 @@ export interface ScreenMemoryWriteInput {
 export function screenMemoryWrite(
   input: ScreenMemoryWriteInput
 ): MemoryWriteVerdict {
-  const text = memoryContentToText(input.category, input.content)
+  return screenMemoryText({
+    text: memoryContentToText(input.category, input.content),
+    policyRules: input.policyRules,
+    now: input.now,
+  })
+}
+
+export interface ScreenMemoryTextInput {
+  /** The untrusted text as an agent would later read it. */
+  text: string
+  policyRules?: readonly PolicyRuleRef[] | undefined
+  now?: Date | undefined
+}
+
+/**
+ * The same verdict for text that is not a category-shaped memory card — a
+ * team memory judgment revision (LUM-1356) screens its fields through this.
+ */
+export function screenMemoryText(
+  input: ScreenMemoryTextInput
+): MemoryWriteVerdict {
+  const text = input.text
   if (!text) return { ok: true, signals: null }
 
   const { signals } = detectInjectionSignals(text)

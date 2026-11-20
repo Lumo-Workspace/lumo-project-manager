@@ -1,5 +1,7 @@
 import type {
   HookEventRetentionMode,
+  JudgmentAdmission,
+  JudgmentMode,
   Prisma,
   SummaryFrequency,
 } from '@prisma/client'
@@ -43,6 +45,9 @@ export interface WorkspaceUpdateData {
   doneRequiresReview?: boolean
   /** LUM-1338: the AI feature switches (sparse; absent = on). */
   aiFeatureSwitches?: AiFeatureSwitches
+  /** LUM-1356: team memory judgments rollout switch and who may review. */
+  judgmentMode?: JudgmentMode
+  judgmentAdmission?: JudgmentAdmission
 }
 
 // ── Workspace Repository ────────────────────────────────────────────────────
@@ -204,6 +209,19 @@ export const workspaceRepository = {
     })
     return row
       ? { testCase: row.doneRequiresTestCase, review: row.doneRequiresReview }
+      : null
+  },
+
+  /** LUM-1356 — the team memory judgment settings; null when the workspace is gone. */
+  async findJudgmentSettings(
+    workspaceId: string
+  ): Promise<{ mode: JudgmentMode; admission: JudgmentAdmission } | null> {
+    const row = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { judgmentMode: true, judgmentAdmission: true },
+    })
+    return row
+      ? { mode: row.judgmentMode, admission: row.judgmentAdmission }
       : null
   },
 

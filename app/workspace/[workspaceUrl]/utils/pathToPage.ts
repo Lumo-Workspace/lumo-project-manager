@@ -37,6 +37,9 @@ export function pathToPage(
   if (rest.startsWith('/drafts')) return { page: 'drafts' }
   if (rest.startsWith('/boundary-crossings'))
     return { page: 'boundary-crossings' }
+  // LUM-1356: `/team-memory` and `/team-memory/<revisionId>` are one page; the
+  // page reads the revision id from the path itself.
+  if (rest.startsWith('/team-memory')) return { page: 'team-memory' }
   if (rest.startsWith('/sprints/')) {
     const sprintId = rest.slice('/sprints/'.length).split('/')[0]
     return { page: 'sprint-detail', projectSlug: sprintId }

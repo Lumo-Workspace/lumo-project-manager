@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireIdentity } from '@/lib/auth'
+import { requireHumanWebSession } from '@/lib/auth/human-web-session'
 import { serviceErrorResponse, zodError } from '@/lib/api/helpers'
 import { crossingQueueService } from '@/lib/services/crossing-queue.service'
 import { tagCrossingSchema } from '@/lib/validation/crossing-queue'
@@ -18,12 +19,11 @@ export async function POST(request: NextRequest, { params }: Params) {
   const identity = await requireIdentity(request)
   if (identity instanceof NextResponse) return identity
 
-  if (identity.source !== 'clerk') {
-    return NextResponse.json(
-      { error: 'Tagging a boundary crossing is a web UI action' },
-      { status: 403 }
-    )
-  }
+  const webOnly = requireHumanWebSession(
+    identity,
+    'Tagging a boundary crossing is a web UI action'
+  )
+  if (webOnly) return webOnly
 
   const body = await request.json().catch(() => null)
   const parsed = tagCrossingSchema.safeParse(body)
