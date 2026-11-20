@@ -30,6 +30,10 @@ export const EXPORT_KINDS = [
   'task-templates',
   'tags',
   'memories',
+  // LUM-1356: reviewed team memory — entries, their revisions, their events.
+  'judgments',
+  'judgment-revisions',
+  'judgment-events',
   'audit-events',
   'feedback',
 ] as const
@@ -305,6 +309,79 @@ async function pageRows(
           createdByMemberId: true,
           supersededAt: true,
           ...ts,
+        },
+        ...page,
+      })
+    case 'judgments':
+      return prisma.judgment.findMany({
+        where: { workspaceId },
+        select: {
+          id: true,
+          projectId: true,
+          name: true,
+          activeRevisionId: true,
+          pausedAt: true,
+          ...ts,
+        },
+        ...page,
+      })
+    case 'judgment-revisions':
+      // Every column but the derived ones (contentSignals, embedding).
+      return prisma.judgmentRevision.findMany({
+        where: { workspaceId },
+        select: {
+          id: true,
+          judgmentId: true,
+          version: true,
+          digest: true,
+          baseRevisionId: true,
+          description: true,
+          statement: true,
+          kind: true,
+          rationale: true,
+          polarity: true,
+          assertionKey: true,
+          assertionValue: true,
+          scopeRepo: true,
+          scopePathGlobs: true,
+          scopeTopic: true,
+          when: true,
+          limits: true,
+          validFrom: true,
+          validUntil: true,
+          origin: true,
+          judgedByMemberId: true,
+          judgedByLabel: true,
+          recordedByMemberId: true,
+          recordedByAgent: true,
+          recordedVia: true,
+          captureMethod: true,
+          sourceSessionId: true,
+          sourceTaskId: true,
+          sourceRefs: true,
+          evidence: true,
+          context: true,
+          alternatives: true,
+          expectedOutcome: true,
+          state: true,
+          legacyMemoryId: true,
+          createdAt: true,
+        },
+        ...page,
+      })
+    case 'judgment-events':
+      return prisma.judgmentEvent.findMany({
+        where: { workspaceId },
+        select: {
+          id: true,
+          judgmentId: true,
+          revisionId: true,
+          revisionDigest: true,
+          type: true,
+          actorMemberId: true,
+          channel: true,
+          reason: true,
+          createdAt: true,
         },
         ...page,
       })

@@ -48,6 +48,15 @@ jest.mock('@/app/workspace/[workspaceUrl]/hooks/useProjects', () => ({
 jest.mock('@/app/workspace/[workspaceUrl]/hooks/useCrossingQueue', () => ({
   useCrossingQueueBadge: () => 0,
 }))
+// LUM-1356: team memory review is off, so its sidebar entry renders nothing.
+jest.mock('@/app/workspace/[workspaceUrl]/hooks/useJudgments', () => ({
+  useJudgmentSettings: () => ({
+    settings: null,
+    loading: false,
+    enabled: false,
+  }),
+  useJudgmentInbox: () => ({ items: [], loading: false, error: null }),
+}))
 jest.mock('@/app/workspace/[workspaceUrl]/cache', () => ({
   clearCache: jest.fn(),
 }))

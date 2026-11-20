@@ -86,6 +86,7 @@ export type Page =
   | 'document-editor'
   | 'drafts'
   | 'boundary-crossings'
+  | 'team-memory'
   | 'sprints'
   | 'sprint-detail'
   | 'milestone-detail'

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireIdentity } from '@/lib/auth'
+import { requireHumanWebSession } from '@/lib/auth/human-web-session'
 import { resolveTaskParam } from '@/lib/api/resolve-task-param'
 import { resolveCrossingParam } from '@/lib/api/resolve-crossing-param'
 import { boundaryCrossingService } from '@/lib/services/boundary-crossing.service'
@@ -27,15 +28,11 @@ export async function POST(request: NextRequest, { params }: Params) {
   if (identity instanceof NextResponse) return identity
 
   // Human/Clerk only — same guard as the disposition route.
-  if (identity.source !== 'clerk') {
-    return NextResponse.json(
-      {
-        error:
-          'A boundary-crossing system explanation can only be requested from a human-authenticated browser session — the agent/CLI path is closed by design',
-      },
-      { status: 403 }
-    )
-  }
+  const webOnly = requireHumanWebSession(
+    identity,
+    'A boundary-crossing system explanation can only be requested from a human-authenticated browser session — the agent/CLI path is closed by design'
+  )
+  if (webOnly) return webOnly
 
   const { id: rawId, crossingId: rawCrossingId } = await params
   const task = await resolveTaskParam(rawId, identity.workspaceId)

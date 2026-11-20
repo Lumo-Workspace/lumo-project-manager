@@ -1674,6 +1674,166 @@
         "detail": "writes hook and rules files in this repo"
       }
     },
+    "judgment": {
+      "arguments": [],
+      "flags": {},
+      "hasSubcommands": true,
+      "isInvokable": false,
+      "description": "Reviewed team memory: propose a candidate or a revision, list, show, inbox. Approval happens in the web app only"
+    },
+    "judgment inbox": {
+      "arguments": [],
+      "flags": {
+        "--json": {
+          "long": "--json",
+          "short": null,
+          "value": "none",
+          "enum": null,
+          "enumCaseInsensitive": false,
+          "description": "Print { version, candidates, total, nextCursor } as JSON"
+        }
+      },
+      "hasSubcommands": false,
+      "isInvokable": true,
+      "description": "List the candidates waiting for a human review, conflicts first. Read-only: reviewing happens in the web app.",
+      "codex": { "serverOnly": true, "localFiles": "none" }
+    },
+    "judgment list": {
+      "arguments": [],
+      "flags": {
+        "--all": {
+          "long": "--all",
+          "short": null,
+          "value": "none",
+          "enum": null,
+          "enumCaseInsensitive": false,
+          "description": "Include entries with no approved revision in effect"
+        },
+        "--cursor": {
+          "long": "--cursor",
+          "short": null,
+          "value": "required",
+          "enum": null,
+          "enumCaseInsensitive": false,
+          "description": "Continue from a previous page"
+        },
+        "--json": {
+          "long": "--json",
+          "short": null,
+          "value": "none",
+          "enum": null,
+          "enumCaseInsensitive": false,
+          "description": "Print { version, judgments, total, nextCursor } as JSON"
+        },
+        "--limit": {
+          "long": "--limit",
+          "short": "-n",
+          "value": "required",
+          "enum": null,
+          "enumCaseInsensitive": false,
+          "description": "Rows per page, 1–200 (default 50)"
+        }
+      },
+      "hasSubcommands": false,
+      "isInvokable": true,
+      "description": "List team memory entries with an approved revision in effect; --all includes entries that have none.",
+      "codex": { "serverOnly": true, "localFiles": "none" }
+    },
+    "judgment propose": {
+      "arguments": [{ "name": "name", "required": true, "variadic": false }],
+      "flags": {
+        "--file": {
+          "long": "--file",
+          "short": null,
+          "value": "required",
+          "enum": null,
+          "enumCaseInsensitive": false,
+          "description": "JSON file with the content: description, statement, kind, rationale, limits, and optionally assertion, scope, when, origin, evidence; \"-\" reads stdin"
+        },
+        "--json": {
+          "long": "--json",
+          "short": null,
+          "value": "none",
+          "enum": null,
+          "enumCaseInsensitive": false,
+          "description": "Print { version, judgment, revision } as JSON"
+        }
+      },
+      "hasSubcommands": false,
+      "isInvokable": true,
+      "description": "Propose a new team memory entry as a candidate. It takes effect only after a person approves it in the web app.",
+      "codex": {
+        "serverOnly": false,
+        "localFiles": "reads",
+        "detail": "--file <json>"
+      }
+    },
+    "judgment revise": {
+      "arguments": [
+        { "name": "judgment", "required": true, "variadic": false }
+      ],
+      "flags": {
+        "--base": {
+          "long": "--base",
+          "short": null,
+          "value": "required",
+          "enum": null,
+          "enumCaseInsensitive": false,
+          "description": "The revision in effect that you read (from `lumo judgment show`), or none when nothing is in effect; refused if it is no longer current"
+        },
+        "--file": {
+          "long": "--file",
+          "short": null,
+          "value": "required",
+          "enum": null,
+          "enumCaseInsensitive": false,
+          "description": "JSON file with the full new content (same shape as propose); \"-\" reads stdin"
+        },
+        "--json": {
+          "long": "--json",
+          "short": null,
+          "value": "none",
+          "enum": null,
+          "enumCaseInsensitive": false,
+          "description": "Print { version, judgment, revision } as JSON"
+        }
+      },
+      "hasSubcommands": false,
+      "isInvokable": true,
+      "description": "Propose a revision of an entry (by name or id). The revision in effect stays in effect until a person approves the candidate.",
+      "codex": {
+        "serverOnly": false,
+        "localFiles": "reads",
+        "detail": "--file <json>"
+      }
+    },
+    "judgment show": {
+      "arguments": [
+        { "name": "judgment", "required": true, "variadic": false }
+      ],
+      "flags": {
+        "--history": {
+          "long": "--history",
+          "short": null,
+          "value": "none",
+          "enum": null,
+          "enumCaseInsensitive": false,
+          "description": "Also list every revision and the review events"
+        },
+        "--json": {
+          "long": "--json",
+          "short": null,
+          "value": "none",
+          "enum": null,
+          "enumCaseInsensitive": false,
+          "description": "Print { version, judgment } as JSON"
+        }
+      },
+      "hasSubcommands": false,
+      "isInvokable": true,
+      "description": "Show one entry (by name or id): the revision in effect and the candidates waiting for review.",
+      "codex": { "serverOnly": true, "localFiles": "none" }
+    },
     "member": {
       "arguments": [],
       "flags": {},

@@ -116,6 +116,15 @@ export const queryKeys = {
     ['crossingQueue', filter, projectId] as const,
   crossingCard: (crossingId: string) => ['crossingCard', crossingId] as const,
 
+  // LUM-1356: team memory judgments. `judgmentsAll` is the prefix every
+  // judgment query shares, so one invalidation refreshes queue, badge and page.
+  judgmentsAll: () => ['judgments'] as const,
+  judgmentInbox: () => ['judgments', 'inbox'] as const,
+  judgmentActive: () => ['judgments', 'active'] as const,
+  judgmentRevision: (revisionId: string) =>
+    ['judgments', 'revision', revisionId] as const,
+  judgmentSettings: () => ['judgmentSettings'] as const,
+
   fragmentTrust: (ids: string[]) => ['fragmentTrust', [...ids].sort()] as const,
 
   retireCandidates: (projectId: string) =>

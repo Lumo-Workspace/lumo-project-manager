@@ -39,6 +39,8 @@ export function pageToPath(
       return `${base}/drafts`
     case 'boundary-crossings':
       return `${base}/boundary-crossings`
+    case 'team-memory':
+      return `${base}/team-memory`
     case 'sprints':
       return `${base}/sprints`
     case 'sprint-detail':

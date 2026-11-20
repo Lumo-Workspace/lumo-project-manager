@@ -9,6 +9,7 @@ import { WorkspaceExportCard } from '../settings/WorkspaceExportCard'
 import { AiDerivedContentRow } from '../settings/AiDerivedContentRow'
 import { AiDerivedContentDeleteRow } from '../settings/AiDerivedContentDeleteRow'
 import { AiFeaturesSection } from '../settings/AiFeaturesSection'
+import { TeamMemoryReviewSection } from '../settings/TeamMemoryReviewSection'
 import { DangerZoneCard } from '../settings/DangerZoneCard'
 import { SettingsSection } from '../settings/SettingsSection'
 import {
@@ -149,6 +150,8 @@ export function AiSettingsPage() {
           >
             <AiFeaturesSection />
           </SettingsSection>
+          {/* LUM-1356: hidden until the platform opens it for the workspace. */}
+          <TeamMemoryReviewSection />
           {/* The row carries its own label, so the section has no title. */}
           <SettingsSection id='ai-derived-content'>
             <div className='rounded-lg border border-border overflow-hidden'>

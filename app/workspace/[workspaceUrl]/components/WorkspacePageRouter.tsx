@@ -24,6 +24,7 @@ import { DocumentsPage } from './pages/DocumentsPage'
 import { DocumentEditorPage } from './pages/DocumentEditorPage'
 import { DraftsPage } from './DraftsPage'
 import { CrossingQueuePage } from './pages/crossing-queue/CrossingQueuePage'
+import { TeamMemoryPage } from './pages/team-memory/TeamMemoryPage'
 import { SprintsLandingClient } from '../sprints/components/SprintsLandingClient'
 import { SprintDetailClient } from '../sprints/[sprintId]/SprintDetailClient'
 import { GlobalDocTree, CollapsedDocTreeRail } from './document/GlobalDocTree'
@@ -395,6 +396,9 @@ export function WorkspacePageRouter(props: Props) {
           projects={projects.filter(p => !p.isIdea)}
         />
       )
+
+    case 'team-memory':
+      return <TeamMemoryPage members={members} />
 
     case 'sprints':
       return <SprintsLandingClient />

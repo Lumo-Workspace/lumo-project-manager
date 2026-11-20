@@ -22,6 +22,9 @@ export const EXPORTED_MODELS = [
   'DocumentTemplate',
   'TaskTemplate',
   'Tag',
+  'Judgment',
+  'JudgmentEvent',
+  'JudgmentRevision',
   'Memory',
   'TaskArtifact',
   // LUM-1303: task decisions (formerly a section of the description).

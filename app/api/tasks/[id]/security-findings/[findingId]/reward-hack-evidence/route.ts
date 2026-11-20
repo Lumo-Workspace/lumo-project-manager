@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireIdentity } from '@/lib/auth'
+import { requireHumanWebSession } from '@/lib/auth/human-web-session'
 import { resolveTaskParam } from '@/lib/api/resolve-task-param'
 import { serviceErrorResponse, zodError } from '@/lib/api/helpers'
 import { rewardHackEvidenceService } from '@/ee/security/services/reward-hack-evidence.service'
@@ -23,12 +24,11 @@ type Params = { params: Promise<{ id: string; findingId: string }> }
 export async function GET(request: NextRequest, { params }: Params) {
   const identity = await requireIdentity(request)
   if (identity instanceof NextResponse) return identity
-  if (identity.source !== 'clerk') {
-    return NextResponse.json(
-      { error: 'Reward-hack evidence is web-only' },
-      { status: 403 }
-    )
-  }
+  const webOnly = requireHumanWebSession(
+    identity,
+    'Reward-hack evidence is web-only'
+  )
+  if (webOnly) return webOnly
 
   const parsed = rewardHackEvidenceParamsSchema.safeParse(await params)
   if (!parsed.success) return zodError(parsed)

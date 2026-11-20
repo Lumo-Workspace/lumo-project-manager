@@ -1,6 +1,6 @@
 # Lumo CLI guide
 
-Served by `lumo skill read`: the core workflow, the rules that matter most, and a map of the references. **Before composing a command whose flags or edge cases matter, read its reference** — don't run from memory.
+Served by `lumo skill read`: the core workflow, the key rules, and a map of the references. **Before composing a command whose flags or edge cases matter, read its reference** — don't run from memory.
 
 ## Prerequisites
 
@@ -69,7 +69,7 @@ Read with `lumo skill read references/<file>`:
 - [sprints.md](references/sprints.md) — `sprint *`
 - [docs.md](references/docs.md) — `doc` CRUD, move, sharing, import/sync
 - [doc-editing.md](references/doc-editing.md) — `doc show --raw/--section`, `doc patch/append/diff/rebuild-source`
-- [memory.md](references/memory.md) — `memory *`, PR-review learnings
+- [memory.md](references/memory.md) · [judgments.md](references/judgments.md) — `memory *`, `judgment *`
 - [worktree.md](references/worktree.md) — `worktree add/rm/list/prune`
 - [pr-scan.md](references/pr-scan.md) — `pr show`, `pr review`, `task show --scans`, `finding disposition`
 - [pr-scan-output.md](references/pr-scan-output.md) — reading a scan: layers, findings, hunt, size caps
@@ -87,7 +87,7 @@ Read with `lumo skill read references/<file>`:
 ## Common mistakes
 
 - No subtasks / `--parent` — use a milestone, `task dep add`, or fold follow-ups into the original task.
-- No `session start` / `session detach`.
+- No `session start`.
 - No `--yes`, no prompts — approval is `--confirm`, only after the user approves. Sole exception: `lumo init` outside a git repo asks `[y/N]` (stdin; EOF/60 s = no); relay it to the user, never answer it.
 - `lumo task update LUM-N --status done` is one direct call — don't walk `in_progress → in_review → done`.
 - Evidence is `lumo task testcase`; a PR's scans are `lumo pr show`. Comment bodies are positional (`task comment add "<body>"`).

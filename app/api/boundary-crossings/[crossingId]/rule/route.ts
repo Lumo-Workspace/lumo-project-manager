@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireIdentity } from '@/lib/auth'
+import { requireHumanWebSession } from '@/lib/auth/human-web-session'
 import { memberAuditContext } from '@/lib/api/audit-context'
 import { serviceErrorResponse, zodError } from '@/lib/api/helpers'
 import { crossingQueueService } from '@/lib/services/crossing-queue.service'
@@ -24,15 +25,11 @@ export async function POST(request: NextRequest, { params }: Params) {
   const identity = await requireIdentity(request)
   if (identity instanceof NextResponse) return identity
 
-  if (identity.source !== 'clerk') {
-    return NextResponse.json(
-      {
-        error:
-          'A boundary crossing can only be ruled on from a human-authenticated browser session',
-      },
-      { status: 403 }
-    )
-  }
+  const webOnly = requireHumanWebSession(
+    identity,
+    'A boundary crossing can only be ruled on from a human-authenticated browser session'
+  )
+  if (webOnly) return webOnly
 
   const body = await request.json().catch(() => null)
   const parsed = ruleCrossingSchema.safeParse(body)

@@ -74,6 +74,16 @@ import { taskFigmaRm } from './commands/task-figma-rm'
 import { taskFigmaRefresh } from './commands/task-figma-refresh'
 import { memoryAdd, memoryList, memoryUpdate } from './commands/memory'
 import { memoryDelete } from './commands/memory-delete'
+import {
+  judgmentInbox,
+  judgmentList,
+  judgmentPropose,
+  judgmentRevise,
+  judgmentShow,
+  type JudgmentListOptions,
+  type JudgmentShowOptions,
+  type JudgmentWriteOptions,
+} from './commands/judgment'
 import { memoryShow } from './commands/memory-show'
 import { memorySync } from './commands/memory-sync'
 import { memoryPush } from './commands/memory-push'
@@ -2676,6 +2686,87 @@ memoryCmd
       memoryFold(ref as string | undefined, opts as { dryRun?: boolean })
     )
   )
+
+// LUM-1356: reviewed team memory. An agent proposes and reads; approval is
+// a person's, in the web app — there is deliberately no command for it.
+const judgmentCmd = program
+  .command('judgment')
+  .description(
+    'Reviewed team memory: propose a candidate or a revision, list, show, inbox. Approval happens in the web app only'
+  )
+
+judgmentCmd
+  .command('propose <name>')
+  .codex(readsLocalFile('--file <json>'))
+  .description(
+    'Propose a new team memory entry as a candidate. It takes effect only after a person approves it in the web app.'
+  )
+  .requiredOption(
+    '--file <path>',
+    'JSON file with the content: description, statement, kind, rationale, limits, and optionally assertion, scope, when, origin, evidence; "-" reads stdin'
+  )
+  .option('--json', 'Print { version, judgment, revision } as JSON')
+  .action(
+    wrap((name, options) =>
+      judgmentPropose(name as string, options as JudgmentWriteOptions)
+    )
+  )
+
+judgmentCmd
+  .command('revise <judgment>')
+  .codex(readsLocalFile('--file <json>'))
+  .description(
+    'Propose a revision of an entry (by name or id). The revision in effect stays in effect until a person approves the candidate.'
+  )
+  .requiredOption(
+    '--file <path>',
+    'JSON file with the full new content (same shape as propose); "-" reads stdin'
+  )
+  .requiredOption(
+    '--base <revision-id|none>',
+    'The revision in effect that you read (from `lumo judgment show`), or none when nothing is in effect; refused if it is no longer current'
+  )
+  .option('--json', 'Print { version, judgment, revision } as JSON')
+  .action(
+    wrap((judgment, options) =>
+      judgmentRevise(judgment as string, options as JudgmentWriteOptions)
+    )
+  )
+
+judgmentCmd
+  .command('list')
+  .codex(SERVER_ONLY)
+  .description(
+    'List team memory entries with an approved revision in effect; --all includes entries that have none.'
+  )
+  .option('--all', 'Include entries with no approved revision in effect')
+  .option('-n, --limit <count>', 'Rows per page, 1–200 (default 50)')
+  .option('--cursor <cursor>', 'Continue from a previous page')
+  .option('--json', 'Print { version, judgments, total, nextCursor } as JSON')
+  .action(wrap(options => judgmentList(options as JudgmentListOptions)))
+
+judgmentCmd
+  .command('show <judgment>')
+  .codex(SERVER_ONLY)
+  .description(
+    'Show one entry (by name or id): the revision in effect and the candidates waiting for review.'
+  )
+  .option('--history', 'Also list every revision and the review events')
+  .option('--json', 'Print { version, judgment } as JSON')
+  .action(
+    wrap((judgment, options) =>
+      judgmentShow(judgment as string, options as JudgmentShowOptions)
+    )
+  )
+
+judgmentCmd
+  .command('inbox')
+  .codex(SERVER_ONLY)
+  .description(
+    'List the candidates waiting for a human review, conflicts first. Read-only: reviewing happens in the web app.'
+  )
+  .option('--json', 'Print { version, candidates, total, nextCursor } as JSON')
+  .action(wrap(options => judgmentInbox(options as { json?: boolean })))
 
 const milestoneCmd = program
   .command('milestone')

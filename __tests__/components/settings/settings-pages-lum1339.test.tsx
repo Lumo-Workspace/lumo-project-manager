@@ -84,6 +84,12 @@ jest.mock(
   })
 )
 jest.mock(
+  '@/app/workspace/[workspaceUrl]/components/settings/TeamMemoryReviewSection',
+  () => ({
+    TeamMemoryReviewSection: () => null,
+  })
+)
+jest.mock(
   '@/app/workspace/[workspaceUrl]/components/settings/AiFeaturesSection',
   () => ({
     AiFeaturesSection: () => <div>ai-features</div>,

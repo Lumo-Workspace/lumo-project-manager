@@ -54,6 +54,10 @@ const DEVIATIONS = {
     // LUM-1240: new commands, classified where they are defined.
     'feedback list',
     'feedback show',
+    // LUM-1356: reviewed team memory, read-only commands.
+    'judgment inbox',
+    'judgment list',
+    'judgment show',
     'priority create',
     'priority list',
     // LUM-1285: project archive / unarchive.
@@ -69,9 +73,17 @@ const DEVIATIONS = {
   // LUM-1321 / LUM-1333: `review import` reads the report it sends.
   fileReadingAdded: {
     'feedback create': '--evidence-file',
+    // LUM-1356: propose / revise read the --file they send.
+    'judgment propose': '--file <json>',
+    'judgment revise': '--file <json>',
     'review import': 'reads the report file <file> and uploads it to Lumo',
   } as Record<string, string>,
   sandboxedAdded: {
+    // LUM-1356: propose / revise read the --file they send.
+    'judgment propose':
+      'reads local files (--file …) — Codex asks first (--file <json>)',
+    'judgment revise':
+      'reads local files (--file …) — Codex asks first (--file <json>)',
     'feedback create':
       'reads local files (--file …) — Codex asks first (--evidence-file)',
     'review import':

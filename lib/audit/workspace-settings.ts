@@ -23,6 +23,9 @@ export const AUDITED_WORKSPACE_SETTINGS = {
     // LUM-1334: they change what DONE requires.
     'doneRequiresTestCase',
     'doneRequiresReview',
+    // LUM-1356: they change whether and by whom team memory is reviewed.
+    'judgmentMode',
+    'judgmentAdmission',
   ],
   'workspace.retention_updated': [
     'hookEventRetentionMode',

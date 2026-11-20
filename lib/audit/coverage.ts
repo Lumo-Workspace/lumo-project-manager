@@ -269,6 +269,11 @@ export const AUDIT_EXEMPT: Readonly<Record<AuditUnit, string>> = {
   'lib/services/feishu-integration.service.ts#buildInstallAuthorizeUrl':
     'read-only gate before the Feishu round trip; completeInstall is audited',
   'lib/services/done-requirements-settings.service.ts#get': READ_ONLY,
+  // LUM-1356: team memory review. `update` goes through updateWorkspace
+  // (audited there); each review action writes its own judgment_events row —
+  // actor, channel, reason and the revision digest — in the same transaction.
+  'lib/services/judgment/judgment-settings.service.ts#get': READ_ONLY,
+  'lib/services/judgment/judgment.service.ts#assertMayReview': GATE_HELPER,
   'lib/services/github-app-install.service.ts#startReverify':
     'read-only gate before the GitHub round trip; reverify is audited',
   'lib/services/workspace-export.service.ts#listExports': READ_ONLY,

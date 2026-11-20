@@ -100,13 +100,15 @@ export const aiDerivedContentRepository = {
     workspaceId: string
   ): Promise<AiDerivedContentCounts> {
     const [
-      memories,
+      legacyMemories,
+      judgments,
       sessionSummaries,
       runSummaries,
       claimSnapshots,
       verdictTexts,
     ] = await Promise.all([
       prisma.memory.count({ where: { workspaceId } }),
+      prisma.judgment.count({ where: { workspaceId } }),
       prisma.session.count({
         where: { workspaceId, ...SESSION_SUMMARY_PRESENT },
       }),
@@ -117,7 +119,8 @@ export const aiDerivedContentRepository = {
       }),
     ])
     return {
-      memories,
+      // LUM-1356: reviewed team memory entries are team memory too.
+      memories: legacyMemories + judgments,
       sessionSummaries,
       runSummaries,
       claimSnapshots,
@@ -148,6 +151,27 @@ export const aiDerivedContentRepository = {
       }),
       prisma.memory.deleteMany({ where: { workspaceId, id: { in: ids } } }),
     ])
+    return deleted.count
+  },
+
+  /**
+   * LUM-1356 — delete up to `limit` of the workspace's team memory judgments.
+   * Their revisions and governance events go with them (FK cascade). Returns
+   * how many judgments went.
+   */
+  async deleteJudgmentBatch(
+    workspaceId: string,
+    limit: number
+  ): Promise<number> {
+    const rows = await prisma.judgment.findMany({
+      where: { workspaceId },
+      select: { id: true },
+      take: limit,
+    })
+    if (rows.length === 0) return 0
+    const deleted = await prisma.judgment.deleteMany({
+      where: { workspaceId, id: { in: rows.map(r => r.id) } },
+    })
     return deleted.count
   },
 

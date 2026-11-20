@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireIdentity } from '@/lib/auth'
+import { isHumanWebSession } from '@/lib/auth/human-web-session'
 import { zodError } from '@/lib/api/helpers'
 import { logger } from '@/lib/logger'
 import { resolveTaskParam } from '@/lib/api/resolve-task-param'
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest, { params }: Params) {
     const task = await resolveTaskParam(rawId, identity.workspaceId)
     if (!task)
       return NextResponse.json({ error: 'Task not found' }, { status: 404 })
-    if (query.data.view === 'readout' || identity.source !== 'clerk') {
+    if (query.data.view === 'readout' || !isHumanWebSession(identity)) {
       const readout = await prScanReadoutService.getForTask(
         identity.workspaceId,
         { id: task.id, identifier: `${task.team.identifier}-${task.number}` },
